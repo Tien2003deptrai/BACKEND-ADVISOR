@@ -1,0 +1,29 @@
+const express = require('express');
+
+// import routes
+const authRoutes = require('./routes/auth.route');
+const userRoutes = require("./routes/user.route");
+const studentRoutes = require("./routes/student.route");
+const academicRoutes = require("./routes/academic.route");
+const feedbackRoutes = require("./routes/feedback.route");
+const meetingRoutes = require("./routes/meeting.route");
+const dashboardRoutes = require("./routes/dashboard.route");
+const notificationRoutes = require("./routes/notification.route");
+// middleware for handling errors
+const errorHandler = require('./middlewares/errorHandler');
+
+const app = express();
+
+app.use(express.json());
+app.use('/api/auth', authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/academic", academicRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/meeting", meetingRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/notification", notificationRoutes);
+
+app.use(errorHandler);
+
+module.exports = app;
