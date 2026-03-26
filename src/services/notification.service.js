@@ -1,6 +1,9 @@
 ﻿const Notification = require("../models/notification.model");
 const RiskPrediction = require("../models/riskPrediction.model");
 const AnomalyAlert = require("../models/anomalyAlert.model");
+const Feedback = require("../models/feedback.model");
+const AdvisorClass = require("../models/advisorClass.model");
+const ClassMember = require("../models/classMember.model");
 const User = require("../models/user.model");
 
 class NotificationService {
@@ -57,35 +60,52 @@ class NotificationService {
         };
     }
 
-    async generateAlerts(body = {}) {
+    async generateAlerts(body = {}, currentUser = null) {
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
+        const negativeDays = Number(body.negative_days ?? 30);
         const studentUserId = body.student_user_id;
-        const advisorUserId = body.advisor_user_id;
+        const advisorUserId = currentUser?.role === "ADVISOR" ? currentUser.userId : body.advisor_user_id;
 
-        const studentFilter = studentUserId ? { _id: studentUserId } : {};
-        if (advisorUserId) {
-            studentFilter["student_info.advisor_user_id"] = advisorUserId;
+        const classFilter = { status: "ACTIVE" };
+        if (advisorUserId) classFilter.advisor_user_id = advisorUserId;
+
+        const advisorClasses = await AdvisorClass.find(classFilter).select("_id advisor_user_id");
+        if (!advisorClasses.length) {
+            return { created_count: 0, details: { risk: 0, sentiment: 0, anomaly: 0 } };
         }
 
-        const students = await User.find({
-            role: "STUDENT",
-            ...studentFilter,
-            "student_info.advisor_user_id": { $exists: true, $ne: null },
-        }).select("_id student_info.advisor_user_id student_info.student_code profile.full_name");
+        const classIds = advisorClasses.map((item) => item._id);
+        const memberFilter = { class_id: { $in: classIds }, status: "ACTIVE" };
+        if (studentUserId) memberFilter.student_user_id = studentUserId;
 
-        if (!students.length) {
-            return { created_count: 0, details: { risk: 0, anomaly: 0 } };
+        const members = await ClassMember.find(memberFilter).select("class_id student_user_id");
+        if (!members.length) {
+            return { created_count: 0, details: { risk: 0, sentiment: 0, anomaly: 0 } };
         }
 
-        const studentIds = students.map((s) => s._id);
-        const advisorByStudent = new Map(students.map((s) => [String(s._id), s.student_info?.advisor_user_id]));
+        const advisorByClassId = new Map(advisorClasses.map((item) => [String(item._id), item.advisor_user_id]));
+        const advisorByStudent = new Map(
+            members
+                .map((item) => [String(item.student_user_id), advisorByClassId.get(String(item.class_id))])
+                .filter(([, advisorId]) => !!advisorId)
+        );
+
+        const studentIds = Array.from(new Set(members.map((item) => String(item.student_user_id))));
+        if (!studentIds.length) {
+            return { created_count: 0, details: { risk: 0, sentiment: 0, anomaly: 0 } };
+        }
+
+        const students = await User.find({ _id: { $in: studentIds }, role: "STUDENT" }).select(
+            "_id student_info.student_code profile.full_name"
+        );
         const studentCodeById = new Map(students.map((s) => [String(s._id), s.student_info?.student_code || ""]));
         const studentNameById = new Map(students.map((s) => [String(s._id), s.profile?.full_name || ""]));
 
         let riskCreated = 0;
+        let sentimentCreated = 0;
         let anomalyCreated = 0;
 
-        const [riskRows, anomalyRows] = await Promise.all([
+        const [riskRows, negativeFeedbackRows, anomalyRows] = await Promise.all([
             RiskPrediction.find({
                 student_user_id: { $in: studentIds },
                 is_latest: true,
@@ -93,6 +113,15 @@ class NotificationService {
             })
                 .select("_id student_user_id risk_score term_code predicted_at")
                 .sort({ predicted_at: -1 }),
+            Feedback.find({
+                student_user_id: { $in: studentIds },
+                sentiment_label: "NEGATIVE",
+                submitted_at: {
+                    $gte: new Date(Date.now() - negativeDays * 24 * 60 * 60 * 1000),
+                },
+            })
+                .select("_id student_user_id submitted_at")
+                .sort({ submitted_at: -1 }),
             AnomalyAlert.find({
                 student_user_id: { $in: studentIds },
                 severity: "HIGH",
@@ -122,6 +151,25 @@ class NotificationService {
             if (created) riskCreated += 1;
         }
 
+        for (const feedback of negativeFeedbackRows) {
+            const key = String(feedback.student_user_id);
+            const advisorId = advisorByStudent.get(key);
+            if (!advisorId) continue;
+
+            const created = await this.createNotification({
+                recipient_user_id: advisorId,
+                type: "SENTIMENT_ALERT",
+                title: "Negative sentiment feedback",
+                content: `Student ${studentCodeById.get(key) || key} reported negative sentiment`,
+                ref: {
+                    collection_name: "feedbacks",
+                    doc_id: feedback._id,
+                },
+            });
+
+            if (created) sentimentCreated += 1;
+        }
+
         for (const anomaly of anomalyRows) {
             const key = String(anomaly.student_user_id);
             const advisorId = advisorByStudent.get(key);
@@ -143,9 +191,10 @@ class NotificationService {
         }
 
         return {
-            created_count: riskCreated + anomalyCreated,
+            created_count: riskCreated + sentimentCreated + anomalyCreated,
             details: {
                 risk: riskCreated,
+                sentiment: sentimentCreated,
                 anomaly: anomalyCreated,
             },
         };

@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ["RISK_ALERT", "ANOMALY_ALERT", "SYSTEM"],
+            enum: ["RISK_ALERT", "SENTIMENT_ALERT", "ANOMALY_ALERT", "SYSTEM"],
             required: true,
         },
         title: { type: String, trim: true },

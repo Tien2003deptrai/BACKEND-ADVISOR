@@ -4,6 +4,8 @@ const RiskPrediction = require("../models/riskPrediction.model");
 const Feedback = require("../models/feedback.model");
 const Notification = require("../models/notification.model");
 const AnomalyAlert = require("../models/anomalyAlert.model");
+const AdvisorClass = require("../models/advisorClass.model");
+const ClassMember = require("../models/classMember.model");
 const User = require("../models/user.model");
 const throwError = require("../utils/throwError");
 const notificationService = require("./notification.service");
@@ -11,10 +13,7 @@ const notificationService = require("./notification.service");
 class DashboardService {
     async getStudentDashboard(body, currentUser) {
         const historyLimit = Number(body.history_limit || 6);
-        const studentUserId =
-            currentUser.role === "STUDENT"
-                ? currentUser.userId
-                : body.student_user_id;
+        const studentUserId = currentUser.userId;
 
         if (!studentUserId) throwError("student_user_id is required", 422);
 
@@ -54,7 +53,7 @@ class DashboardService {
     }
 
     async getAdvisorDashboard(body, currentUser) {
-        const advisorUserId = currentUser.role === "ADVISOR" ? currentUser.userId : body.advisor_user_id;
+        const advisorUserId = currentUser.userId;
         if (!advisorUserId) throwError("advisor_user_id is required", 422);
 
         await notificationService.generateAlerts({
@@ -67,22 +66,40 @@ class DashboardService {
         const skip = (page - 1) * limit;
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
 
-        const studentFilter = {
-            role: "STUDENT",
-            "student_info.advisor_user_id": advisorUserId,
-        };
+        const advisorClass = await AdvisorClass.findOne({
+            advisor_user_id: advisorUserId,
+            status: "ACTIVE",
+        }).select("_id");
 
-        const [students, total] = await Promise.all([
-            User.find(studentFilter)
-                .select("_id username email profile.full_name student_info status")
-                .sort({ createdAt: -1 })
+        if (!advisorClass) {
+            return {
+                advisor_user_id: advisorUserId,
+                student_table: [],
+                recent_alerts: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    total_pages: 1,
+                },
+            };
+        }
+
+        const [memberRows, total] = await Promise.all([
+            ClassMember.find({ class_id: advisorClass._id, status: "ACTIVE" })
+                .select("student_user_id")
                 .skip(skip)
                 .limit(limit),
-            User.countDocuments(studentFilter),
+            ClassMember.countDocuments({ class_id: advisorClass._id, status: "ACTIVE" }),
         ]);
 
+        const pagedStudentIds = memberRows.map((row) => row.student_user_id);
+        const students = await User.find({ _id: { $in: pagedStudentIds }, role: "STUDENT" })
+            .select("_id username email profile.full_name student_info status")
+            .sort({ createdAt: -1 });
+
         const studentIds = students.map((s) => s._id);
-        const [riskRows, negativeSentimentRows, anomalyRows, recentAlerts] = await Promise.all([
+        const [riskRows, negativeSentimentRows, recentAlerts] = await Promise.all([
             RiskPrediction.aggregate([
                 {
                     $match: {
@@ -114,35 +131,21 @@ class DashboardService {
                     },
                 },
             ]),
-            AnomalyAlert.aggregate([
-                {
-                    $match: {
-                        student_user_id: { $in: studentIds },
-                        status: "OPEN",
-                        severity: { $in: ["MEDIUM", "HIGH"] },
-                    },
-                },
-                {
-                    $group: {
-                        _id: "$student_user_id",
-                        count: { $sum: 1 },
-                    },
-                },
-            ]),
-            Notification.find({ recipient_user_id: advisorUserId })
+            Notification.find({
+                recipient_user_id: advisorUserId,
+                type: { $in: ["RISK_ALERT", "SENTIMENT_ALERT"] },
+            })
                 .sort({ sent_at: -1 })
                 .limit(20),
         ]);
 
         const riskMap = new Map(riskRows.map((row) => [String(row._id), row.latest]));
         const sentimentMap = new Map(negativeSentimentRows.map((row) => [String(row._id), row.count]));
-        const anomalyMap = new Map(anomalyRows.map((row) => [String(row._id), row.count]));
 
         const student_table = students.map((student) => {
             const key = String(student._id);
             const risk = riskMap.get(key);
             const negativeCount = sentimentMap.get(key) || 0;
-            const anomalyCount = anomalyMap.get(key) || 0;
             const highRiskCount = risk?.risk_score >= riskThreshold ? 1 : 0;
 
             return {
@@ -152,10 +155,9 @@ class DashboardService {
                 email: student.email,
                 risk_score: risk?.risk_score ?? null,
                 risk_label: risk?.risk_label ?? null,
-                alert_count: negativeCount + anomalyCount + highRiskCount,
+                alert_count: negativeCount + highRiskCount,
                 alerts: {
                     negative_sentiment_30d: negativeCount,
-                    open_anomaly: anomalyCount,
                     high_risk: highRiskCount,
                 },
             };

@@ -10,7 +10,8 @@ const router = express.Router();
 router.post(
     "/submit",
     authMiddleware,
-    authorizeRoles("STUDENT", "ADMIN"),
+    // ADMIN scope disabled in current deployment
+    authorizeRoles("STUDENT"),
     academicValidator.submitAcademicValidator,
     validate,
     academicController.submitAcademic

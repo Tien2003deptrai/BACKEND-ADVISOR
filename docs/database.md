@@ -6,7 +6,7 @@
 - Tach `meeting` va `feedback` thanh collection rieng.
 - Van bam chuc nang trong `DS Chuc Nang.md` va Dataset 1, 2.
 
-## 2) Collection de xuat (9 collection)
+## 2) Collection de xuat (11 collection)
 
 ### 2.1 `users`
 Gop auth + role + profile + thong tin hoc vu co ban.
@@ -121,16 +121,51 @@ Moi document = 1 goi y cho sinh vien (AI-23).
 }
 ```
 
-### 2.6 `meetings`
+### 2.6 `advisor_classes`
+Moi advisor chi co 1 lop co van.
+
+```json
+{
+  "_id": "ObjectId",
+  "class_code": "CVHT-KTPM-K22",
+  "class_name": "Co van hoc tap KTPM K22",
+  "advisor_user_id": "ObjectId",
+  "faculty_code": "CNTT",
+  "program_code": "KTPM",
+  "cohort_year": 2022,
+  "status": "ACTIVE",
+  "created_at": "timestamps",
+  "updated_at": "timestamps"
+}
+```
+
+### 2.7 `class_members`
+Moi sinh vien chi thuoc 1 lop co van.
+
+```json
+{
+  "_id": "ObjectId",
+  "class_id": "ObjectId",
+  "student_user_id": "ObjectId",
+  "joined_at": "ISODate",
+  "status": "ACTIVE",
+  "created_at": "timestamps",
+  "updated_at": "timestamps"
+}
+```
+
+### 2.8 `meetings`
 Moi document = 1 buoi SHCVHT.
 
 ```json
 {
   "_id": "ObjectId",
-  "student_user_id": "ObjectId",
+  "class_id": "ObjectId",
+  "student_user_ids": ["ObjectId", "ObjectId"],
   "advisor_user_id": "ObjectId",
   "term_code": "2026-1",
   "meeting_time": "ISODate",
+  "meeting_end_time": "ISODate",
   "notes_raw": "...",
   "notes_summary": "...",
   "summary_model": "T5",
@@ -139,12 +174,13 @@ Moi document = 1 buoi SHCVHT.
 }
 ```
 
-### 2.7 `feedbacks` (Dataset 2)
-Moi document = 1 feedback; lien ket meeting neu co.
+### 2.9 `feedbacks` (Dataset 2)
+Moi document = 1 feedback sau 1 buoi meeting (meeting_id bat buoc), va gui trong vong 24 gio sau meeting_end_time.
 
 ```json
 {
   "_id": "ObjectId",
+  "class_id": "ObjectId",
   "student_user_id": "ObjectId",
   "advisor_user_id": "ObjectId",
   "meeting_id": "ObjectId",
@@ -157,7 +193,7 @@ Moi document = 1 feedback; lien ket meeting neu co.
 }
 ```
 
-### 2.8 `chat_threads`
+### 2.10 `chat_threads`
 Moi document = 1 thread chat cua sinh vien.
 (note: bang nay chua co trong code hien tai)
 
@@ -183,7 +219,7 @@ Moi document = 1 thread chat cua sinh vien.
 }
 ```
 
-### 2.9 `notifications`
+### 2.11 `notifications`
 ```json
 {
   "_id": "ObjectId",
@@ -205,11 +241,13 @@ Moi document = 1 thread chat cua sinh vien.
 ## 3) Mapping API -> collection
 - `/api/auth/login`, `/api/auth/logout`, `/api/users` -> `users`
 - `/api/students`, `/api/students/{id}` -> `users` (filter `role=STUDENT`)
+- `/api/advisor-classes` -> `advisor_classes`
+- `/api/class-members` -> `class_members`
 - `/api/academic/submit` -> `academic_records`
 - `/api/feedback`, `/api/feedback/list` -> `feedbacks`
 - `/api/meeting` -> `meetings`
 - `/api/dashboard/student` -> `academic_records` + `risk_predictions` + `feedbacks.sentiment_label`
-- `/api/dashboard/advisor` -> `users` + `risk_predictions` + `notifications` (note: code dang dung them `feedbacks` + `anomaly_alerts`)
+- `/api/dashboard/advisor` -> `advisor_classes` + `class_members` + `users` + `risk_predictions` + `feedbacks` + `anomaly_alerts` + `notifications`
 - `/api/dashboard/faculty` -> aggregate `risk_predictions` + `anomaly_alerts`
 - `/api/chatbot/query` -> `chat_threads`
 
@@ -219,8 +257,11 @@ Moi document = 1 thread chat cua sinh vien.
 - `risk_predictions`: unique partial `(student_user_id, term_code, is_latest)` where `is_latest=true`, index `(risk_label, predicted_at -1)`.
 - `anomaly_alerts`: index `(student_user_id, detected_at -1)`, index `(status, severity)`.
 - `recommendations`: index `(student_user_id, created_at -1)`, index `(term_code)`.
-- `meetings`: index `(student_user_id, meeting_time -1)`, `(advisor_user_id, meeting_time -1)`.
-- `feedbacks`: index `(student_user_id, submitted_at -1)`, `(advisor_user_id, submitted_at -1)`, `sentiment_label`, `meeting_id`.
+- `advisor_classes`: unique `advisor_user_id`, unique `class_code`, index `status`.
+- `class_members`: unique `student_user_id`, unique `(class_id, student_user_id)`, index `(class_id, status)`.
+- `meetings`: index `(class_id, meeting_time -1)`, `(student_user_ids, meeting_time -1)`, `(advisor_user_id, meeting_time -1)`.
+- `feedbacks`: index `(class_id, submitted_at -1)`, `(student_user_id, submitted_at -1)`, `(advisor_user_id, submitted_at -1)`, `sentiment_label`, `meeting_id`.
+  unique `(meeting_id, student_user_id)` de moi SV chi gui 1 feedback cho 1 meeting.
 - `chat_threads`: index `student_user_id`, index `updated_at -1`.
 - `notifications`: index `(recipient_user_id, is_read, sent_at -1)`.
 
@@ -228,6 +269,8 @@ Moi document = 1 thread chat cua sinh vien.
 - `users`
 - `academic_records`
 - `risk_predictions`
+- `advisor_classes`
+- `class_members`
 - `meetings`
 - `feedbacks`
 - `notifications`

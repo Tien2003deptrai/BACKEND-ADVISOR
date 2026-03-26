@@ -9,6 +9,8 @@ const feedbackRoutes = require("./routes/feedback.route");
 const meetingRoutes = require("./routes/meeting.route");
 const dashboardRoutes = require("./routes/dashboard.route");
 const notificationRoutes = require("./routes/notification.route");
+const advisorClassRoutes = require("./routes/advisorClass.route");
+const classMemberRoutes = require("./routes/classMember.route");
 // middleware for handling errors
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -23,6 +25,8 @@ app.use("/api/feedback", feedbackRoutes);
 app.use("/api/meeting", meetingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notification", notificationRoutes);
+app.use("/api/advisor-classes", advisorClassRoutes);
+app.use("/api/class-members", classMemberRoutes);
 
 app.use(errorHandler);
 

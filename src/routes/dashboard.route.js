@@ -10,7 +10,7 @@ const router = express.Router();
 router.get(
     "/student",
     authMiddleware,
-    authorizeRoles("STUDENT", "ADVISOR", "FACULTY", "ADMIN"),
+    authorizeRoles("STUDENT"),
     dashboardValidator.studentDashboardValidator,
     validate,
     dashboardController.getStudentDashboard
@@ -19,7 +19,7 @@ router.get(
 router.get(
     "/advisor",
     authMiddleware,
-    authorizeRoles("ADVISOR", "FACULTY", "ADMIN"),
+    authorizeRoles("ADVISOR"),
     dashboardValidator.advisorDashboardValidator,
     validate,
     dashboardController.getAdvisorDashboard

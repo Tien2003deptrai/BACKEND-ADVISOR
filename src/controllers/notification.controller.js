@@ -12,7 +12,7 @@ class NotificationController {
 
     async generateAlerts(req, res, next) {
         try {
-            const result = await notificationService.generateAlerts(req.body);
+            const result = await notificationService.generateAlerts(req.body, req.user);
             return res.status(200).json({ message: "Generate notifications successfully", data: result });
         } catch (error) {
             next(error);
