@@ -16,6 +16,7 @@ class AcademicService {
             study_hours: data.study_hours,
             motivation_score: data.motivation_score,
             stress_score: data.stress_score,
+            sentiment_score: data.sentiment_score,
             recorded_at: data.recorded_at || new Date(),
         };
 

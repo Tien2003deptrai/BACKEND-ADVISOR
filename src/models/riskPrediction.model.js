@@ -19,10 +19,9 @@ const riskPredictionSchema = new mongoose.Schema(
 );
 
 riskPredictionSchema.index(
-    { student_user_id: 1, is_latest: 1 },
+    { student_user_id: 1, term_code: 1, is_latest: 1 },
     { unique: true, partialFilterExpression: { is_latest: true } }
 );
 riskPredictionSchema.index({ risk_label: 1, predicted_at: -1 });
 
 module.exports = mongoose.model("RiskPrediction", riskPredictionSchema);
-

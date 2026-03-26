@@ -62,6 +62,7 @@ Moi document = 1 sinh vien / 1 hoc ky.
   "study_hours": 12.5,
   "motivation_score": 2,
   "stress_score": 4,
+  "sentiment_score": 0.65,
   "recorded_at": "ISODate",
   "created_at": "timestamps",
   "updated_at": "timestamps"
@@ -150,7 +151,7 @@ Moi document = 1 feedback; lien ket meeting neu co.
   "feedback_text": "Em dang qua tai hoc phan nay...",
   "rating": 2,
   "submitted_at": "ISODate",
-  "label": "NEGATIVE", // POSITIVE
+  "sentiment_label": "NEGATIVE", // POSITIVE
   "created_at": "timestamps",
   "updated_at": "timestamps"
 }
@@ -158,6 +159,7 @@ Moi document = 1 feedback; lien ket meeting neu co.
 
 ### 2.8 `chat_threads`
 Moi document = 1 thread chat cua sinh vien.
+(note: bang nay chua co trong code hien tai)
 
 ```json
 {
@@ -189,6 +191,7 @@ Moi document = 1 thread chat cua sinh vien.
   "type": "RISK_ALERT",
   "title": "Canh bao sinh vien nguy co cao",
   "content": "SV220001 risk_score=0.83",
+  "term_code": "2026-1",
   "ref": {
     "collection": "risk_predictions",
     "doc_id": "ObjectId"
@@ -205,19 +208,19 @@ Moi document = 1 thread chat cua sinh vien.
 - `/api/academic/submit` -> `academic_records`
 - `/api/feedback`, `/api/feedback/list` -> `feedbacks`
 - `/api/meeting` -> `meetings`
-- `/api/dashboard/student` -> `academic_records` + `risk_predictions` + `feedbacks.sentiment`
-- `/api/dashboard/advisor` -> `users` + `risk_predictions` + `notifications`
+- `/api/dashboard/student` -> `academic_records` + `risk_predictions` + `feedbacks.sentiment_label`
+- `/api/dashboard/advisor` -> `users` + `risk_predictions` + `notifications` (note: code dang dung them `feedbacks` + `anomaly_alerts`)
 - `/api/dashboard/faculty` -> aggregate `risk_predictions` + `anomaly_alerts`
 - `/api/chatbot/query` -> `chat_threads`
 
 ## 4) Index de xuat
 - `users`: unique `username`, unique `email`, unique sparse `student_info.student_code`, index `role`, index `student_info.advisor_user_id`.
 - `academic_records`: unique `(student_user_id, term_code)`, index `(student_user_id, recorded_at -1)`.
-- `risk_predictions`: unique partial `(student_user_id, is_latest)` where `is_latest=true`, index `(risk_label, predicted_at -1)`.
+- `risk_predictions`: unique partial `(student_user_id, term_code, is_latest)` where `is_latest=true`, index `(risk_label, predicted_at -1)`.
 - `anomaly_alerts`: index `(student_user_id, detected_at -1)`, index `(status, severity)`.
 - `recommendations`: index `(student_user_id, created_at -1)`, index `(term_code)`.
 - `meetings`: index `(student_user_id, meeting_time -1)`, `(advisor_user_id, meeting_time -1)`.
-- `feedbacks`: index `(student_user_id, submitted_at -1)`, `(advisor_user_id, submitted_at -1)`, `sentiment.label`, `meeting_id`.
+- `feedbacks`: index `(student_user_id, submitted_at -1)`, `(advisor_user_id, submitted_at -1)`, `sentiment_label`, `meeting_id`.
 - `chat_threads`: index `student_user_id`, index `updated_at -1`.
 - `notifications`: index `(recipient_user_id, is_read, sent_at -1)`.
 
@@ -230,6 +233,4 @@ Moi document = 1 thread chat cua sinh vien.
 - `notifications`
 
 Them o sprint sau:
-- `anomaly_alerts`
-- `recommendations`
 - `chat_threads`

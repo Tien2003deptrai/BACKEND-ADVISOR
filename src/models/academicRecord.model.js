@@ -17,6 +17,7 @@ const academicRecordSchema = new mongoose.Schema(
         study_hours: { type: Number, min: 0 },
         motivation_score: { type: Number, min: 1, max: 5 },
         stress_score: { type: Number, min: 1, max: 5 },
+        sentiment_score: { type: Number, min: 0, max: 1 },
         recorded_at: { type: Date, required: true, default: Date.now },
     },
     { timestamps: true, collection: "academic_records" }

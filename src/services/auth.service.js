@@ -9,8 +9,13 @@ class AuthService {
             const createPayload = {
                 username: userData.username,
                 email: userData.email,
-                password: userData.password,
-                name: userData.name,
+                password_hash: userData.password,
+                profile: {
+                    full_name: userData.profile.full_name,
+                },
+                student_info: {
+                    student_code: userData.student_info?.student_code,
+                },
                 role: "STUDENT",
                 status: "ACTIVE",
             };
@@ -29,7 +34,7 @@ class AuthService {
     async login(userData) {
         const user = await userModel
             .findOne({ email: userData.email })
-            .select("+password +password_hash");
+            .select("+password_hash");
         if (!user) throwError("Invalid email or password", 401);
 
         const isMatch = await user.comparePassword(userData.password);

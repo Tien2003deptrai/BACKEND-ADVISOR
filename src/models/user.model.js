@@ -55,16 +55,10 @@ const userSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
-        name: { type: String, trim: true },
-        password: {
-            type: String,
-            minlength: 6,
-            select: false,
-        },
-        password_hash: { type: String, select: false },
+        password_hash: { type: String, minlength: 6, select: false },
         role: {
             type: String,
-            enum: ["STUDENT", "ADVISOR", "FACULTY", "ADMIN", "user", "admin"],
+            enum: ["STUDENT", "ADVISOR", "FACULTY", "ADMIN"],
             default: "STUDENT",
         },
         status: { type: String, enum: ["ACTIVE", "INACTIVE", "LOCKED"], default: "ACTIVE" },
@@ -80,6 +74,7 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ "student_info.student_code": 1 }, { unique: true, sparse: true });
 userSchema.index({ "student_info.advisor_user_id": 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ role: 1, "student_info.advisor_user_id": 1 });
 
 userSchema.pre("validate", function () {
     if (!this.username && this.email) {
@@ -87,31 +82,24 @@ userSchema.pre("validate", function () {
         this.username = localPart;
     }
     if (!this.profile) this.profile = {};
-    if (this.name && !this.profile.full_name) this.profile.full_name = this.name;
+
+    if (this.role === "STUDENT" && !this.student_info?.student_code) {
+        this.invalidate("student_info.student_code", "student_info.student_code is required for STUDENT role");
+    }
 });
 
 userSchema.pre("save", async function () {
-    if (this.isModified("password") && this.password) {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(this.password, salt);
-        this.password = hashedPassword;
-        this.password_hash = hashedPassword;
-        return;
-    }
-
     if (this.isModified("password_hash") && this.password_hash) {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(this.password_hash, salt);
         this.password_hash = hashedPassword;
-        this.password = hashedPassword;
     }
 });
 
 userSchema.methods.comparePassword = async function (plainPassword) {
-    const targetHash = this.password || this.password_hash;
+    const targetHash = this.password_hash;
     if (!targetHash) return false;
     return bcrypt.compare(plainPassword, targetHash);
 };
 
 module.exports = mongoose.model('User', userSchema);
-

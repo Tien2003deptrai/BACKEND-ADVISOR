@@ -6,6 +6,7 @@ class FeedbackValidator {
         body("meeting_id").optional().isMongoId().withMessage("invalid meeting_id"),
         body("feedback_text").notEmpty().withMessage("feedback_text is required").isString().trim(),
         body("rating").optional().isInt({ min: 1, max: 5 }).withMessage("rating must be between 1 and 5"),
+        body("sentiment_label").optional().isIn(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
         body("submitted_at").optional().isISO8601().withMessage("submitted_at must be ISO date"),
     ];
 

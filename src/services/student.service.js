@@ -7,7 +7,7 @@ class StudentService {
         const limit = Number(body.limit || 20);
         const skip = (page - 1) * limit;
 
-        const filter = { role: { $in: ["STUDENT", "user"] } };
+        const filter = { role: "STUDENT" };
         if (body.search) {
             filter.$or = [
                 { username: { $regex: body.search, $options: "i" } },
@@ -38,7 +38,7 @@ class StudentService {
     }
 
     async getStudentById(id) {
-        const filter = { _id: id, role: { $in: ["STUDENT", "user"] } };
+        const filter = { _id: id, role: "STUDENT" };
 
         const student = await User.findOne(filter).select(
             "_id username email role status profile org student_info createdAt updatedAt"

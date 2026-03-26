@@ -18,14 +18,13 @@ const feedbackSchema = new mongoose.Schema(
         feedback_text: { type: String, required: true, trim: true },
         rating: { type: Number, min: 1, max: 5 },
         submitted_at: { type: Date, required: true, default: Date.now },
-        label: { type: String, enum: ["POSITIVE", "NEUTRAL", "NEGATIVE"] },
+        sentiment_label: { type: String, enum: ["POSITIVE", "NEUTRAL", "NEGATIVE"] },
     },
     { timestamps: true, collection: "feedbacks" }
 );
 
 feedbackSchema.index({ student_user_id: 1, submitted_at: -1 });
 feedbackSchema.index({ advisor_user_id: 1, submitted_at: -1 });
-feedbackSchema.index({ "sentiment.label": 1 });
+feedbackSchema.index({ sentiment_label: 1 });
 
 module.exports = mongoose.model("Feedback", feedbackSchema);
-

@@ -11,6 +11,7 @@ class FeedbackService {
             meeting_id: data.meeting_id,
             feedback_text: data.feedback_text,
             rating: data.rating,
+            sentiment_label: data.sentiment_label,
             submitted_at: data.submitted_at || new Date(),
         });
 
@@ -26,7 +27,7 @@ class FeedbackService {
         if (body.student_user_id) filter.student_user_id = body.student_user_id;
         if (body.advisor_user_id) filter.advisor_user_id = body.advisor_user_id;
 
-        if (body.sentiment_label) filter["sentiment.label"] = body.sentiment_label;
+        if (body.sentiment_label) filter.sentiment_label = body.sentiment_label;
 
         const [items, total] = await Promise.all([
             Feedback.find(filter).sort({ submitted_at: -1 }).skip(skip).limit(limit),

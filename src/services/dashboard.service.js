@@ -12,7 +12,7 @@ class DashboardService {
     async getStudentDashboard(body, currentUser) {
         const historyLimit = Number(body.history_limit || 6);
         const studentUserId =
-            currentUser.role === "STUDENT" || currentUser.role === "user"
+            currentUser.role === "STUDENT"
                 ? currentUser.userId
                 : body.student_user_id;
 
@@ -26,7 +26,7 @@ class DashboardService {
                 .sort({ recorded_at: -1 })
                 .limit(historyLimit)
                 .select(
-                    "student_user_id term_code gpa_prev_sem gpa_current num_failed attendance_rate recorded_at"
+                    "student_user_id term_code gpa_prev_sem gpa_current num_failed attendance_rate sentiment_score recorded_at"
                 ),
             Feedback.aggregate([
                 { $match: { student_user_id: new mongoose.Types.ObjectId(studentUserId) } },
@@ -34,7 +34,7 @@ class DashboardService {
                     $group: {
                         _id: {
                             month: { $dateToString: { format: "%Y-%m", date: "$submitted_at" } },
-                            label: "$label",
+                            sentiment_label: "$sentiment_label",
                         },
                         count: { $sum: 1 },
                     },
@@ -68,7 +68,7 @@ class DashboardService {
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
 
         const studentFilter = {
-            role: { $in: ["STUDENT", "user"] },
+            role: "STUDENT",
             "student_info.advisor_user_id": advisorUserId,
         };
 
@@ -101,7 +101,7 @@ class DashboardService {
                 {
                     $match: {
                         student_user_id: { $in: studentIds },
-                        label: "NEGATIVE",
+                        sentiment_label: "NEGATIVE",
                         submitted_at: {
                             $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                         },
@@ -176,7 +176,7 @@ class DashboardService {
 
     async getFacultyDashboard(body) {
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
-        const studentFilter = { role: { $in: ["STUDENT", "user"] } };
+        const studentFilter = { role: "STUDENT" };
         if (body.faculty_code) studentFilter["org.faculty_code"] = body.faculty_code;
 
         const students = await User.find(studentFilter).select("_id");

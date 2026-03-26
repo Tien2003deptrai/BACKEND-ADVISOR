@@ -18,6 +18,10 @@ class AcademicValidator {
             .isInt({ min: 1, max: 5 })
             .withMessage("motivation_score must be between 1 and 5"),
         body("stress_score").optional().isInt({ min: 1, max: 5 }).withMessage("stress_score must be between 1 and 5"),
+        body("sentiment_score")
+            .optional()
+            .isFloat({ min: 0, max: 1 })
+            .withMessage("sentiment_score must be between 0 and 1"),
         body("recorded_at").optional().isISO8601().withMessage("recorded_at must be ISO date"),
     ];
 }

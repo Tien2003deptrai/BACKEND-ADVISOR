@@ -239,7 +239,7 @@ Số dòng đề xuất: 500 – 1000 bản ghi
 
 Số dòng: 2000 phản hồi
 
-| feedback_id | student_id | text | label |
+| feedback_id | student_id | text | sentiment_label |
 |---|---|---|---|
 | 1 | 1023 | “Em đang quá tải học phần này…” | Negative |
 | 2 | 1055 | “Buổi SH hôm nay rất hữu ích.” | Positive |

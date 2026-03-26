@@ -18,11 +18,12 @@ const notificationSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ["RISK_ALERT", "SENTIMENT_ALERT", "ANOMALY_ALERT", "SYSTEM"],
+            enum: ["RISK_ALERT", "ANOMALY_ALERT", "SYSTEM"],
             required: true,
         },
         title: { type: String, trim: true },
         content: { type: String, trim: true },
+        term_code: { type: String, trim: true, index: true },
         ref: { type: refSchema, default: undefined },
         is_read: { type: Boolean, default: false },
         sent_at: { type: Date, required: true, default: Date.now },
