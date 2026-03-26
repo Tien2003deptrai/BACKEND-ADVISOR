@@ -16,7 +16,7 @@ router.post(
     advisorClassController.upsertClass
 );
 
-router.get(
+router.post(
     "/my",
     authMiddleware,
     authorizeRoles("ADVISOR", "ADMIN"),
