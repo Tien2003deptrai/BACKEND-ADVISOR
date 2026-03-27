@@ -1,16 +1,6 @@
 const authService = require("../services/auth.service");
 
 class AuthController {
-    async register(req, res, next) {
-        try {
-            const userData = req.body;
-            const result = await authService.register(userData);
-            return res.status(201).json({ message: "Register successfully", data: result });
-        } catch (error) {
-            next(error);
-        }
-    }
-
     async login(req, res, next) {
         try {
             const userData = req.body;
@@ -21,9 +11,24 @@ class AuthController {
         }
     }
 
+    async refresh(req, res, next) {
+        try {
+            const result = await authService.refresh(req.body.refresh_token);
+            return res.status(200).json({ message: "Refresh token successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async logout(req, res, next) {
         try {
-            const result = await authService.logout();
+            const result = await authService.logout({
+                currentUser: req.user,
+                accessTokenJti: req.auth?.accessTokenJti,
+                accessTokenExp: req.auth?.accessTokenExp,
+                refreshToken: req.body.refresh_token,
+                allDevices: req.body.all_devices,
+            });
             return res.status(200).json({ message: "Logout successfully", data: result });
         } catch (error) {
             next(error);

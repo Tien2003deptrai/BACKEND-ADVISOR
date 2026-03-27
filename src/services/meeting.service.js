@@ -1,6 +1,7 @@
 const Meeting = require("../models/meeting.model");
 const AdvisorClass = require("../models/advisorClass.model");
 const ClassMember = require("../models/classMember.model");
+const Term = require("../models/term.model");
 const throwError = require("../utils/throwError");
 
 class MeetingService {
@@ -25,6 +26,10 @@ class MeetingService {
 
         if (activeMembers.length !== studentIds.length) {
             throwError("all student_user_ids must be active members of class_id", 422);
+        }
+        if (data.term_code) {
+            const term = await Term.findOne({ term_code: data.term_code }).select("_id");
+            if (!term) throwError("term_code is invalid", 422);
         }
 
         const created = await Meeting.create({

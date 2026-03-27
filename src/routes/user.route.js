@@ -7,6 +7,14 @@ const authorizeRoles = require("../middlewares/authorize.middleware");
 
 const router = express.Router();
 
+router.post("/create",
+    authMiddleware,
+    authorizeRoles("ADMIN"),
+    userValidator.createUserValidator,
+    validate,
+    userController.createUser
+);
+
 router.post("/",
     authMiddleware,
     authorizeRoles("ADMIN"),
@@ -16,4 +24,3 @@ router.post("/",
 );
 
 module.exports = router;
-

@@ -10,7 +10,7 @@ const router = express.Router();
 router.post(
     "/",
     authMiddleware,
-    authorizeRoles("ADVISOR", "ADMIN"),
+    authorizeRoles("ADMIN"),
     advisorClassValidator.upsertClassValidator,
     validate,
     advisorClassController.upsertClass

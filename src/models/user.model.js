@@ -15,10 +15,8 @@ const profileSchema = new mongoose.Schema(
 
 const orgSchema = new mongoose.Schema(
     {
-        faculty_code: { type: String, trim: true },
-        faculty_name: { type: String, trim: true },
-        program_code: { type: String, trim: true },
-        program_name: { type: String, trim: true },
+        department_id: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
+        major_id: { type: mongoose.Schema.Types.ObjectId, ref: "Major" },
     },
     { _id: false }
 );
@@ -73,6 +71,8 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ "student_info.student_code": 1 }, { unique: true, sparse: true });
 userSchema.index({ "student_info.advisor_user_id": 1 });
+userSchema.index({ "org.department_id": 1 });
+userSchema.index({ "org.major_id": 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ role: 1, "student_info.advisor_user_id": 1 });
 

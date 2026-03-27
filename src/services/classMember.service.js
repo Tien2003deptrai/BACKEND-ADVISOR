@@ -5,9 +5,10 @@ const throwError = require("../utils/throwError");
 
 class ClassMemberService {
     async addMembers(data, currentUser) {
-        const classItem = await AdvisorClass.findById(data.class_id).select("_id advisor_user_id status");
+        const classItem = await AdvisorClass.findById(data.class_id).select("_id advisor_user_id status department_id major_id");
         if (!classItem) throwError("class not found", 404);
         if (classItem.status !== "ACTIVE") throwError("class is not active", 422);
+        if (!classItem.department_id) throwError("class does not have department_id", 422);
         if (currentUser.role === "ADVISOR" && String(classItem.advisor_user_id) !== String(currentUser.userId)) {
             throwError("forbidden for this class", 403);
         }
@@ -15,9 +16,25 @@ class ClassMemberService {
         const studentIds = Array.from(new Set((data.student_user_ids || []).map(String)));
         if (!studentIds.length) throwError("student_user_ids is required", 422);
 
-        const students = await User.find({ _id: { $in: studentIds }, role: "STUDENT" }).select("_id");
+        const students = await User.find({ _id: { $in: studentIds }, role: "STUDENT" }).select("_id org.department_id org.major_id");
         if (students.length !== studentIds.length) {
             throwError("all student_user_ids must be valid STUDENT users", 422);
+        }
+        for (const student of students) {
+            if (!student.org?.department_id) {
+                throwError(`student ${student._id} does not have department_id`, 422);
+            }
+            if (String(student.org.department_id) !== String(classItem.department_id)) {
+                throwError(`student ${student._id} is not in class department`, 422);
+            }
+            if (classItem.major_id) {
+                if (!student.org?.major_id) {
+                    throwError(`student ${student._id} does not have major_id`, 422);
+                }
+                if (String(student.org.major_id) !== String(classItem.major_id)) {
+                    throwError(`student ${student._id} is not in class major`, 422);
+                }
+            }
         }
 
         const existingRows = await ClassMember.find({ student_user_id: { $in: studentIds } }).select(
@@ -103,4 +120,3 @@ class ClassMemberService {
 }
 
 module.exports = new ClassMemberService();
-

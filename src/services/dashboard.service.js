@@ -179,7 +179,7 @@ class DashboardService {
     async getFacultyDashboard(body) {
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
         const studentFilter = { role: "STUDENT" };
-        if (body.faculty_code) studentFilter["org.faculty_code"] = body.faculty_code;
+        if (body.department_id) studentFilter["org.department_id"] = body.department_id;
 
         const students = await User.find(studentFilter).select("_id");
         const studentIds = students.map((s) => s._id);
@@ -238,7 +238,7 @@ class DashboardService {
         ]);
 
         return {
-            faculty_code: body.faculty_code || null,
+            department_id: body.department_id || null,
             kpi: {
                 total_students: studentIds.length,
                 avg_risk_score: riskKpi[0]?.avg_risk_score ?? 0,

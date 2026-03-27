@@ -27,7 +27,7 @@ class DashboardValidator {
     ];
 
     facultyDashboardValidator = [
-        body("faculty_code").optional().isString().trim(),
+        body("department_id").optional().isMongoId().withMessage("invalid department_id"),
         body("risk_threshold")
             .optional()
             .isFloat({ min: 0, max: 1 })

@@ -1,4 +1,5 @@
 const AcademicRecord = require("../models/academicRecord.model");
+const Term = require("../models/term.model");
 const throwError = require("../utils/throwError");
 
 class AcademicService {
@@ -6,6 +7,8 @@ class AcademicService {
 
         if (!studentUserId) throwError("student_user_id is required", 422);
         if (!data.term_code) throwError("term_code is required", 422);
+        const term = await Term.findOne({ term_code: data.term_code }).select("_id");
+        if (!term) throwError("term_code is invalid", 422);
 
         const payload = {
             gpa_prev_sem: data.gpa_prev_sem,
