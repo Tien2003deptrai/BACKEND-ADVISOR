@@ -16,7 +16,7 @@ router.post(
     classMemberController.addMembers
 );
 
-router.get(
+router.post(
     "/list",
     authMiddleware,
     authorizeRoles("ADVISOR", "ADMIN"),
