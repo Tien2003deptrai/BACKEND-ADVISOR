@@ -24,8 +24,6 @@ class AuthController {
         try {
             const result = await authService.logout({
                 currentUser: req.user,
-                accessTokenJti: req.auth?.accessTokenJti,
-                accessTokenExp: req.auth?.accessTokenExp,
                 refreshToken: req.body.refresh_token,
                 allDevices: req.body.all_devices,
             });

@@ -215,10 +215,10 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
   "class_id": "ObjectId",
   "student_user_ids": ["ObjectId", "ObjectId"],
   "advisor_user_id": "ObjectId",
-  "term_code": "2026-1",
+  "term_id": "ObjectId",
   "meeting_time": "ISODate",
   "meeting_end_time": "ISODate",
-  "notes_raw": "...",
+  "notes_raw": "Noi dung bien ban can du mo ta, khong qua ngan",
   "notes_summary": "...",
   "summary_model": "T5",
   "createdAt": "ISODate",
@@ -305,7 +305,7 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
 - `/api/class-members/*` -> `class_members`
 - `/api/academic/submit` -> `academic_records` (co validate `term_code` ton tai)
 - `/api/feedback`, `/api/feedback/list` -> `feedbacks`
-- `/api/meeting` -> `meetings` (co validate `term_code` ton tai neu gui)
+- `/api/meeting` -> `meetings` (co validate `term_id` ton tai neu gui)
 - `/api/dashboard/student` -> `academic_records` + `risk_predictions` + `feedbacks`
 - `/api/dashboard/advisor` -> `advisor_classes` + `class_members` + `users` + `risk_predictions` + `feedbacks` + `notifications`
 - `/api/dashboard/faculty` -> `users` + `risk_predictions` + `anomaly_alerts`

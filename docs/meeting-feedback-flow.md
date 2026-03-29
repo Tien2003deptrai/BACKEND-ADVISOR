@@ -66,10 +66,10 @@ sequenceDiagram
     "65f000000000000000000201",
     "65f000000000000000000202"
   ],
-  "term_code": "2026-1",
+  "term_id": "65f000000000000000000010",
   "meeting_time": "2026-03-26T08:00:00.000Z",
   "meeting_end_time": "2026-03-26T09:00:00.000Z",
-  "notes_raw": "Noi dung SHCVHT..."
+  "notes_raw": "Noi dung SHCVHT can mo ta ro cac van de, huong xu ly va ke hoach theo doi."
 }
 ```
 

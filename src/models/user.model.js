@@ -65,6 +65,7 @@ const userSchema = new mongoose.Schema(
         student_info: { type: studentInfoSchema, default: undefined },
         advisor_info: { type: advisorInfoSchema, default: undefined },
         last_login_at: { type: Date },
+        token_version: { type: Number, default: 0, min: 0 },
     },
     { timestamps: true }
 );

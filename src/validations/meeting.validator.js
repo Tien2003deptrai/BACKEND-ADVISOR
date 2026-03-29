@@ -8,7 +8,7 @@ class MeetingValidator {
             .withMessage("student_user_ids must be a non-empty array"),
         body("student_user_ids.*").isMongoId().withMessage("invalid student_user_id"),
         body("advisor_user_id").optional().isMongoId().withMessage("invalid advisor_user_id"),
-        body("term_code").optional().isString().trim(),
+        body("term_id").optional().isMongoId().withMessage("invalid term_id"),
         body("meeting_time").notEmpty().withMessage("meeting_time is required").isISO8601(),
         body("meeting_end_time")
             .notEmpty()
@@ -24,7 +24,14 @@ class MeetingValidator {
                 }
                 return true;
             }),
-        body("notes_raw").notEmpty().withMessage("notes_raw is required").isString().trim(),
+        body("notes_raw")
+            .notEmpty()
+            .withMessage("notes_raw is required")
+            .isString()
+            .withMessage("notes_raw must be a string")
+            .trim()
+            .isLength({ min: 30 })
+            .withMessage("notes_raw must be at least 30 characters long"),
         body("notes_summary").optional().isString().trim(),
         body("summary_model").optional().isString().trim(),
     ];
