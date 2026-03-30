@@ -1,5 +1,4 @@
 const userModel = require("../models/user.model");
-const RevokedAccessToken = require("../models/revokedAccessToken.model");
 const { verifyAccessToken } = require("../utils/jwt");
 
 const authMiddleware = async (req, res, next) => {
@@ -15,18 +14,20 @@ const authMiddleware = async (req, res, next) => {
             return res.status(401).json({ message: "Invalid access token" });
         }
 
-        const revoked = await RevokedAccessToken.findOne({ jti: decoded.jti }).select("_id");
-        if (revoked) {
-            return res.status(401).json({ message: "Access token has been revoked" });
-        }
-
-        const user = await userModel.findById(decoded.userId);
+        const user = await userModel.findById(decoded.userId).select("_id role status token_version");
         if (!user) return res.status(401).json({ message: "User not found" });
+        if (user.status !== "ACTIVE") {
+            return res.status(403).json({ message: "User is not active" });
+        }
+        if (Number(decoded.tokenVersion) !== Number(user.token_version || 0)) {
+            return res.status(401).json({ message: "Access token has expired or been revoked" });
+        }
 
         req.user = { userId: user._id, role: user.role };
         req.auth = {
             accessTokenJti: decoded.jti,
             accessTokenExp: decoded.exp,
+            tokenVersion: decoded.tokenVersion,
         };
         // console.log('req.user', req.user)
         next();

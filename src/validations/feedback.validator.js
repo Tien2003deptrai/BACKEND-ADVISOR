@@ -3,7 +3,14 @@ const { body } = require("express-validator");
 class FeedbackValidator {
     submitFeedbackValidator = [
         body("meeting_id").notEmpty().withMessage("meeting_id is required").isMongoId().withMessage("invalid meeting_id"),
-        body("feedback_text").notEmpty().withMessage("feedback_text is required").isString().trim(),
+        body("feedback_text")
+            .notEmpty()
+            .withMessage("feedback_text is required")
+            .isString()
+            .withMessage("feedback_text must be a string")
+            .trim()
+            .isLength({ min: 30 })
+            .withMessage("feedback_text must be at least 30 characters long"),
         body("rating").optional().isInt({ min: 1, max: 5 }).withMessage("rating must be between 1 and 5"),
         body("sentiment_label").optional().isIn(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
         body("submitted_at").optional().isISO8601().withMessage("submitted_at must be ISO date"),

@@ -27,16 +27,16 @@ class MeetingService {
         if (activeMembers.length !== studentIds.length) {
             throwError("all student_user_ids must be active members of class_id", 422);
         }
-        if (data.term_code) {
-            const term = await Term.findOne({ term_code: data.term_code }).select("_id");
-            if (!term) throwError("term_code is invalid", 422);
+        if (data.term_id) {
+            const term = await Term.findById(data.term_id).select("_id");
+            if (!term) throwError("term_id is invalid", 422);
         }
 
         const created = await Meeting.create({
             class_id: data.class_id,
             student_user_ids: studentIds,
             advisor_user_id: advisorUserId,
-            term_code: data.term_code,
+            term_id: data.term_id,
             meeting_time: data.meeting_time,
             meeting_end_time: data.meeting_end_time,
             notes_raw: data.notes_raw,
