@@ -227,11 +227,11 @@ Số dòng đề xuất: 500 – 1000 bản ghi
 | gpa_prev_sem | GPA học kỳ trước |
 | gpa_current | GPA hiện tại |
 | num_failed | Số môn rớt |
-| attendance_rate | Tỷ lệ chuyên cần (%) |
+| attendance_rate | Tỷ lệ chuyên cần (float 0-1) |
 | shcvht_participation | Số buổi SHCVHT tham gia |
 | study_hours | Giờ tự học mỗi tuần |
 | motivation_score | Mức độ động lực (1–5) |
-| stress_score | Mức độ stress (1–5) |
+| stress_level | Mức độ stress (1–5) |
 | sentiment_score | Điểm cảm xúc từ AI-02 |
 | risk_label | 0/1 (Low risk / High risk) |
 

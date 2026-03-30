@@ -25,7 +25,7 @@ class DashboardService {
                 .sort({ recorded_at: -1 })
                 .limit(historyLimit)
                 .select(
-                    "student_user_id term_code gpa_prev_sem gpa_current num_failed attendance_rate sentiment_score recorded_at"
+                    "student_user_id term_id gpa_prev_sem gpa_current num_failed attendance_rate sentiment_score recorded_at"
                 ),
             Feedback.aggregate([
                 { $match: { student_user_id: new mongoose.Types.ObjectId(studentUserId) } },

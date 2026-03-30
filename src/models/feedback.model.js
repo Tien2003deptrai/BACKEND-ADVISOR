@@ -30,6 +30,7 @@ const feedbackSchema = new mongoose.Schema(
         rating: { type: Number, min: 1, max: 5 },
         submitted_at: { type: Date, required: true, default: Date.now },
         sentiment_label: { type: String, enum: ["POSITIVE", "NEUTRAL", "NEGATIVE"] },
+        feedback_score: { type: Number, min: -1, max: 1 },
     },
     { timestamps: true, collection: "feedbacks" }
 );
