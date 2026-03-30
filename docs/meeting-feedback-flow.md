@@ -40,14 +40,22 @@ sequenceDiagram
 1. Tao meeting:
 - `class_id` bat buoc
 - `student_user_ids` bat buoc, la mang khong rong
+- `meeting_time` bat buoc, phai la ISO date
 - `meeting_end_time` bat buoc va phai > `meeting_time`
+- `notes_raw` bat buoc, la string va toi thieu 30 ky tu
+- Chi role `ADVISOR` duoc tao meeting (`POST /api/meeting`)
 
 2. Gui feedback:
 - `meeting_id` bat buoc
+- `feedback_text` bat buoc, la string va toi thieu 30 ky tu
+- `rating` neu gui thi trong khoang 1-5
+- `sentiment_label` neu gui thi thuoc `POSITIVE | NEUTRAL | NEGATIVE`
+- `submitted_at` neu gui thi phai la ISO date
 - Student phai nam trong `meeting.student_user_ids`
 - Student phai la `ACTIVE` member cua `meeting.class_id`
 - Moi student chi gui 1 feedback cho 1 meeting (unique `(meeting_id, student_user_id)`)
 - Chi duoc gui sau khi meeting ket thuc va khong qua 24h
+- Chi role `STUDENT` duoc gui feedback (`POST /api/feedback`)
 
 ## 5) Loi nghiep vu co the gap
 - `404 meeting not found`: meeting khong ton tai
@@ -77,7 +85,7 @@ sequenceDiagram
 ```json
 {
   "meeting_id": "65f000000000000000000301",
-  "feedback_text": "Buoi SHCVHT huu ich",
+  "feedback_text": "Buoi SHCVHT huu ich, em mong muon co them huong dan cu the cho ke hoach hoc tap ky toi.",
   "rating": 4,
   "sentiment_label": "POSITIVE"
 }

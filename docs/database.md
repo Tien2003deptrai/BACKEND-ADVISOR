@@ -2,7 +2,7 @@
 
 Tai lieu nay mo ta schema hien tai dang chay trong source.
 
-## 1) Collections hien co (15)
+## 1) Collections hien co (13)
 
 1. `users`
 2. `departments`
@@ -17,8 +17,6 @@ Tai lieu nay mo ta schema hien tai dang chay trong source.
 11. `meetings`
 12. `feedbacks`
 13. `notifications`
-14. `refresh_tokens`
-15. `revoked_access_tokens`
 
 ## 2) Schema chinh
 
@@ -54,6 +52,7 @@ Tai lieu nay mo ta schema hien tai dang chay trong source.
     "staff_code": "GV001",
     "title": "ThS"
   },
+  "token_version": 0,
   "last_login_at": "ISODate",
   "createdAt": "ISODate",
   "updatedAt": "ISODate"
@@ -266,36 +265,9 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
 }
 ```
 
-### 2.14 `refresh_tokens`
-
-```json
-{
-  "_id": "ObjectId",
-  "user_id": "ObjectId",
-  "jti": "uuid",
-  "expires_at": "ISODate",
-  "revoked_at": "ISODate | null",
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
-```
-
-### 2.15 `revoked_access_tokens`
-
-```json
-{
-  "_id": "ObjectId",
-  "jti": "uuid",
-  "user_id": "ObjectId",
-  "expires_at": "ISODate",
-  "created_at": "ISODate",
-  "updated_at": "ISODate"
-}
-```
-
 ## 3) Mapping API -> collection
 
-- `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout` -> `users`, `refresh_tokens`, `revoked_access_tokens`
+- `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout` -> `users` (token_version based)
 - `/api/users/create`, `/api/users` -> `users`
 - `/api/master-data/departments*` -> `departments`
 - `/api/master-data/majors*` -> `majors`
@@ -325,8 +297,6 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
 - `meetings`: index `(class_id, meeting_time -1)`, `(student_user_ids, meeting_time -1)`, `(advisor_user_id, meeting_time -1)`.
 - `feedbacks`: index `(class_id, submitted_at -1)`, `(student_user_id, submitted_at -1)`, `(advisor_user_id, submitted_at -1)`, `sentiment_label`, unique `(meeting_id, student_user_id)`.
 - `notifications`: index `(recipient_user_id, is_read, sent_at -1)`.
-- `refresh_tokens`: unique `jti`, index `(user_id, revoked_at)`, TTL index `expires_at`.
-- `revoked_access_tokens`: unique `jti`, TTL index `expires_at`.
 
 ## 5) Rule nghiep vu dang enforce trong service
 
@@ -336,5 +306,5 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
 - Add class members: student phai cung `department_id` voi class; neu class co `major_id` thi student phai cung `major_id`.
 - Auth:
   - login tra `access_token` + `refresh_token`
-  - refresh token theo co che rotate
-  - logout revoke refresh token va blacklist access token hien tai.
+  - refresh token theo co che rotate bang `token_version` (khong luu refresh token vao DB)
+  - logout tang `token_version` de vo hieu hoa refresh token hien tai.

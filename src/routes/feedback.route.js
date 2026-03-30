@@ -10,7 +10,7 @@ const router = express.Router();
 router.post(
     "/",
     authMiddleware,
-    authorizeRoles("STUDENT", "ADMIN"),
+    authorizeRoles("STUDENT"),
     feedbackValidator.submitFeedbackValidator,
     validate,
     feedbackController.submitFeedback
