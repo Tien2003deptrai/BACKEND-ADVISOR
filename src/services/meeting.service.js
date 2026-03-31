@@ -5,6 +5,38 @@ const Term = require("../models/term.model");
 const throwError = require("../utils/throwError");
 
 class MeetingService {
+    async listMyMeetings(body, studentUserId) {
+        if (!studentUserId) throwError("student_user_id is required", 422);
+
+        const page = Number(body.page || 1);
+        const limit = Number(body.limit || 20);
+        const skip = (page - 1) * limit;
+
+        const filter = { student_user_ids: studentUserId };
+        const [items, total] = await Promise.all([
+            Meeting.find(filter)
+                .sort({ meeting_time: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("class_id", "class_code class_name")
+                .populate("advisor_user_id", "profile.full_name advisor_info.staff_code advisor_info.title email")
+                .select(
+                    "_id class_id advisor_user_id term_id meeting_time meeting_end_time notes_summary summary_model createdAt"
+                ),
+            Meeting.countDocuments(filter),
+        ]);
+
+        return {
+            items,
+            pagination: {
+                page,
+                limit,
+                total,
+                total_pages: Math.ceil(total / limit) || 1,
+            },
+        };
+    }
+
     async createMeeting(data, advisorUserId) {
         if (!advisorUserId) throwError("advisor_user_id is required", 422);
 

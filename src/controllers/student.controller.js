@@ -18,6 +18,15 @@ class StudentController {
             next(error);
         }
     }
+
+    async getMyAdvisor(req, res, next) {
+        try {
+            const result = await studentService.getMyAdvisor(req.user?.userId);
+            return res.status(200).json({ message: "Get my advisor successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new StudentController();
