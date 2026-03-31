@@ -8,6 +8,15 @@ const authorizeRoles = require("../middlewares/authorize.middleware");
 const router = express.Router();
 
 router.post(
+    "/my",
+    authMiddleware,
+    authorizeRoles("STUDENT"),
+    meetingValidator.listMyMeetingsValidator,
+    validate,
+    meetingController.listMyMeetings
+);
+
+router.post(
     "/",
     authMiddleware,
     authorizeRoles("ADVISOR"),

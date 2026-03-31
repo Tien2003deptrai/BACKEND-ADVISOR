@@ -8,6 +8,13 @@ const authorizeRoles = require("../middlewares/authorize.middleware");
 const router = express.Router();
 
 router.post(
+    "/me/advisor",
+    authMiddleware,
+    authorizeRoles("STUDENT"),
+    studentController.getMyAdvisor
+);
+
+router.post(
     "/",
     authMiddleware,
     authorizeRoles("ADVISOR", "FACULTY", "ADMIN"),

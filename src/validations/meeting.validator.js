@@ -1,6 +1,14 @@
 const { body } = require("express-validator");
 
 class MeetingValidator {
+    listMyMeetingsValidator = [
+        body("page").optional().isInt({ min: 1 }).withMessage("page must be an integer >= 1"),
+        body("limit")
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage("limit must be between 1 and 100"),
+    ];
+
     createMeetingValidator = [
         body("class_id").notEmpty().withMessage("class_id is required").isMongoId(),
         body("student_user_ids")

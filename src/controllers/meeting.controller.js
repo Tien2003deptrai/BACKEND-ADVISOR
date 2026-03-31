@@ -1,6 +1,15 @@
 const meetingService = require("../services/meeting.service");
 
 class MeetingController {
+    async listMyMeetings(req, res, next) {
+        try {
+            const result = await meetingService.listMyMeetings(req.body, req.user?.userId);
+            return res.status(200).json({ message: "Get my meetings successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async createMeeting(req, res, next) {
         try {
             const role = req.user?.role;
