@@ -17,6 +17,15 @@ router.post(
 );
 
 router.post(
+    "/my-info",
+    authMiddleware,
+    authorizeRoles("STUDENT"),
+    meetingValidator.listMyMeetingsValidator,
+    validate,
+    meetingController.getInfoMeeting
+);
+
+router.post(
     "/",
     authMiddleware,
     authorizeRoles("ADVISOR"),

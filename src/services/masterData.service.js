@@ -169,7 +169,6 @@ class MasterDataService {
     async getActiveTerm() {
         const item = await Term.findOne({ status: "ACTIVE" })
             .select("_id term_code academic_year term_name start_date end_date status created_at updated_at");
-        if (!item) throwError("active term not found", 404);
         return item;
     }
 }
