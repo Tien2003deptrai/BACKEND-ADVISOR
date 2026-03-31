@@ -36,8 +36,8 @@ class AuthService {
             token_type: "Bearer",
             access_token: accessToken,
             refresh_token: refreshToken,
-            access_expires_in: process.env.JWT_EXPIRES_IN || "15m",
-            refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || "1d",
+            access_expires_in: process.env.JWT_EXPIRES_IN || "7d",
+            refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || "15d",
         };
     }
 
@@ -77,8 +77,8 @@ class AuthService {
             token_type: "Bearer",
             access_token: accessToken,
             refresh_token: refreshToken,
-            access_expires_in: process.env.JWT_EXPIRES_IN || "15m",
-            refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || "1d",
+            access_expires_in: process.env.JWT_EXPIRES_IN || "7d",
+            refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || "15d",
         };
     }
 

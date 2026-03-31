@@ -31,6 +31,23 @@ JWT_SECRET=<your_secret>
 JWT_EXPIRES_IN=7d
 ```
 
+
+## Lưu ý khi chạy dự án
+
+**Bạn cần khởi động AI server (FastAPI AI) trước khi chạy backend nếu muốn sử dụng các chức năng phân tích AI (sentiment, risk, ...).**
+
+- Xem hướng dẫn chi tiết tại: `ai-services/fastapi-ai/README.md`
+- Hoặc chạy nhanh:
+
+```bash
+cd ai-services/fastapi-ai
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+```
+
+Sau khi AI server đã chạy (thường ở http://localhost:8001), bạn mới chạy backend như hướng dẫn bên dưới.
+
+---
+
 ## Cach chay du an
 
 ```bash

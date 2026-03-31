@@ -20,7 +20,7 @@ const signRefreshToken = (payload, jwtId) => {
         { ...payload, token_type: "refresh" },
         process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         {
-            expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "1d",
+            expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "15d",
             jwtid: jwtId,
         }
     );

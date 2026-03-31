@@ -237,11 +237,13 @@ Note: chi 1 term `ACTIVE` tai 1 thoi diem.
   "feedback_text": "...",
   "rating": 2,
   "submitted_at": "ISODate",
-  "sentiment_label": "POSITIVE | NEUTRAL | NEGATIVE",
+  "sentiment_label": "POSITIVE | NEUTRAL | NEGATIVE", // Được backend tự động gán sau khi gọi AI, client không nhập
+  "feedback_score": 0.85, // Số thực [-1, 1], do AI backend tự động tính, client không nhập
   "createdAt": "ISODate",
   "updatedAt": "ISODate"
 }
 ```
+// Ghi chú: sentiment_label và feedback_score được backend tự động gán sau khi gọi AI, client không nhập hai trường này khi gửi feedback.
 
 ### 2.13 `notifications`
 

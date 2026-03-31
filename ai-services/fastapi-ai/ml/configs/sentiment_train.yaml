@@ -13,7 +13,7 @@ data:
   train_file: ml/data/sentiment_train.csv
   valid_file: ml/data/sentiment_valid.csv
   test_file: ml/data/sentiment_test.csv
-  text_column: text
+  text_column: feedback_text
   label_column: sentiment_label
   max_length: 256
 

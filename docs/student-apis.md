@@ -91,10 +91,13 @@ Base path: **`/api/students`**
 | Trường | Bắt buộc |
 |--------|----------|
 | `meeting_id` | Có (MongoId) |
-| `feedback_text` | Có (chuỗi, tối thiểu 30 ký tự) |
+| `feedback_text` | Có (chuỗi, tối thiểu 20 ký tự) |
 | `rating` | Không (1–5) |
-| `sentiment_label` | Không (`POSITIVE` \| `NEUTRAL` \| `NEGATIVE`) |
+<!-- sentiment_label không nhập từ client, backend tự động gán sau khi gọi AI -->
 | `submitted_at` | Không (ISO8601) |
+
+
+**Lưu ý:** sentiment_label và feedback_score được backend tự động gán sau khi gọi AI, client không nhập hai trường này khi gửi feedback.
 
 ### 4.2. `POST /api/feedback/list` — `listFeedbackValidator`
 

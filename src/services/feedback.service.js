@@ -3,7 +3,60 @@ const Meeting = require("../models/meeting.model");
 const ClassMember = require("../models/classMember.model");
 const throwError = require("../utils/throwError");
 
+const AI_SERVICE_BASE_URL = process.env.AI_SERVICE_BASE_URL || "http://127.0.0.1:8001/api/v1";
+const AI_SERVICE_TIMEOUT_MS = Number(process.env.AI_SERVICE_TIMEOUT_MS || 10000);
+
 class FeedbackService {
+    async classifySentimentViaAI({ meetingId, studentUserId, feedbackText }) {
+        const endpoint = `${AI_SERVICE_BASE_URL}/sentiment/classify`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), AI_SERVICE_TIMEOUT_MS);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    meeting_id: String(meetingId),
+                    student_user_id: String(studentUserId),
+                    feedback_text: feedbackText,
+                }),
+                signal: controller.signal,
+            });
+
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch {
+                payload = null;
+            }
+
+            if (!response.ok) {
+                const detail = payload?.detail || `AI service returned HTTP ${response.status}`;
+                throwError(`sentiment classify failed: ${detail}`, 503);
+            }
+
+            const sentimentLabel = payload?.sentiment_label;
+            const sentimentScore = payload?.sentiment_score;
+
+            if (!["POSITIVE", "NEUTRAL", "NEGATIVE"].includes(sentimentLabel)) {
+                throwError("sentiment classify failed: invalid sentiment_label from AI service", 503);
+            }
+            if (typeof sentimentScore !== "number" || Number.isNaN(sentimentScore)) {
+                throwError("sentiment classify failed: invalid sentiment_score from AI service", 503);
+            }
+
+            return { sentimentLabel, sentimentScore };
+        } catch (error) {
+            if (error?.name === "AbortError") {
+                throwError("sentiment classify timeout from AI service", 504);
+            }
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
     async submitFeedback(data, studentUserId) {
         if (!studentUserId) throwError("student_user_id is required", 422);
 
@@ -38,6 +91,12 @@ class FeedbackService {
             throwError("feedback must be submitted within 24 hours after meeting ends", 422);
         }
 
+        const { sentimentLabel, sentimentScore } = await this.classifySentimentViaAI({
+            meetingId: meeting._id,
+            studentUserId,
+            feedbackText: data.feedback_text,
+        });
+
         let created;
         try {
             created = await Feedback.create({
@@ -47,7 +106,8 @@ class FeedbackService {
                 meeting_id: meeting._id,
                 feedback_text: data.feedback_text,
                 rating: data.rating,
-                sentiment_label: data.sentiment_label,
+                sentiment_label: sentimentLabel,
+                feedback_score: sentimentScore,
                 submitted_at: submittedAt,
             });
         } catch (error) {

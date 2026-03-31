@@ -19,7 +19,7 @@ Dat file CSV vao:
 - `ml/data/sentiment_test.csv` (khuyen nghi)
 
 Cot bat buoc:
-- `text`
+- `feedback_text`
 - `sentiment_label` (`NEGATIVE`, `NEUTRAL`, `POSITIVE`)
 
 Cot optional:
