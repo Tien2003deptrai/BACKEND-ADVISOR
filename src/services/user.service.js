@@ -62,6 +62,14 @@ class UserService {
         }
     }
 
+    async getUserInfo(userId) {
+        const user = await User.findById(userId).select(
+            "_id username email role status profile org student_info advisor_info last_login_at createdAt updatedAt"
+        );
+        if (!user) throwError("User not found", 404);
+        return user;
+    }
+
     async getUsers(body) {
         const page = Number(body.page || 1);
         const limit = Number(body.limit || 20);

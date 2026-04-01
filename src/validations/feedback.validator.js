@@ -21,6 +21,7 @@ class FeedbackValidator {
         body("class_id").optional().isMongoId().withMessage("invalid class_id"),
         body("student_user_id").optional().isMongoId().withMessage("invalid student_user_id"),
         body("advisor_user_id").optional().isMongoId().withMessage("invalid advisor_user_id"),
+        body("meeting_id").optional().isMongoId().withMessage("invalid meeting_id"),
         body("sentiment_label").optional().isIn(["POSITIVE", "NEUTRAL", "NEGATIVE"]),
     ];
 }

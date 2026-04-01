@@ -86,6 +86,13 @@ class ClassMemberService {
 
         const filter = { class_id: classId };
         if (body.status) filter.status = body.status;
+        if (body.search) {
+            filter.$or = [
+                { "student.username": { $regex: body.search, $options: "i" } },
+                { "student.email": { $regex: body.search, $options: "i" } },
+                { "student.student_info.student_code": { $regex: body.search, $options: "i" } },
+            ];
+        }
 
         const [rows, total] = await Promise.all([
             ClassMember.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),

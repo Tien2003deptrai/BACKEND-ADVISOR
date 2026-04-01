@@ -145,6 +145,7 @@ class FeedbackService {
         if (body.class_id) filter.class_id = body.class_id;
         if (body.student_user_id) filter.student_user_id = body.student_user_id;
         if (body.advisor_user_id) filter.advisor_user_id = body.advisor_user_id;
+        if (body.meeting_id) filter.meeting_id = body.meeting_id;
 
         if (body.sentiment_label) filter.sentiment_label = body.sentiment_label;
 

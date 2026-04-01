@@ -14,6 +14,7 @@ class ClassMemberValidator {
         body("status").optional().isIn(["ACTIVE", "INACTIVE"]),
         body("page").optional().isInt({ min: 1 }).withMessage("page must be an integer >= 1"),
         body("limit").optional().isInt({ min: 1, max: 100 }).withMessage("limit must be between 1 and 100"),
+        body("search").optional().isString().trim(),
     ];
 }
 

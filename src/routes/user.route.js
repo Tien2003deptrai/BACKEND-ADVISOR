@@ -9,15 +9,25 @@ const router = express.Router();
 
 router.post("/create",
     authMiddleware,
-    authorizeRoles("ADMIN"),
+    authorizeRoles("ADMIN", "ADVISOR"),
     userValidator.createUserValidator,
     validate,
     userController.createUser
 );
 
+router.post(
+    "/info",
+    authMiddleware,
+    authorizeRoles("ADVISOR", "FACULTY", "ADMIN"),
+    userValidator.getUserInfoValidator,
+    validate,
+    userController.getUserInfo
+);
+
+// cho advisor và admin
 router.post("/",
     authMiddleware,
-    authorizeRoles("ADMIN"),
+    authorizeRoles("ADMIN", "ADVISOR"),
     userValidator.listUsersValidator,
     validate,
     userController.getUsers

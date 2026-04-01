@@ -1,7 +1,8 @@
-import os
 from pathlib import Path
 
 from fastapi import HTTPException
+
+from app.core.config import settings
 from app.schemas.common import Meta
 from app.schemas.sentiment import SentimentRequest, SentimentResponse
 
@@ -15,10 +16,7 @@ def _try_load_trained_model():
     if _MODEL is not None and _TOKENIZER is not None:
         return _MODEL, _TOKENIZER, _MODEL_NAME
 
-    checkpoint = os.getenv(
-        "SENTIMENT_MODEL_DIR",
-        "ml/artifacts/checkpoints/phobert-sentiment/final",
-    )
+    checkpoint = settings.sentiment_model_dir
     checkpoint_path = Path(checkpoint)
     if not checkpoint_path.exists():
         raise HTTPException(

@@ -1,4 +1,4 @@
-﻿const mongoose = require("mongoose");
+const mongoose = require("mongoose");
 const AcademicRecord = require("../models/academicRecord.model");
 const RiskPrediction = require("../models/riskPrediction.model");
 const Feedback = require("../models/feedback.model");
@@ -76,12 +76,99 @@ class DashboardService {
                 advisor_user_id: advisorUserId,
                 student_table: [],
                 recent_alerts: [],
+                class_analytics: null,
                 pagination: {
                     page,
                     limit,
                     total: 0,
                     total_pages: 1,
                 },
+            };
+        }
+
+        const advisorOid = new mongoose.Types.ObjectId(String(advisorUserId));
+        const allMembers = await ClassMember.find({ class_id: advisorClass._id, status: "ACTIVE" })
+            .select("student_user_id")
+            .lean();
+        const allStudentIds = allMembers.map((m) => m.student_user_id);
+        const totalMembers = allStudentIds.length;
+        const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+        let class_analytics = {
+            totals: {
+                members: totalMembers,
+                with_prediction: 0,
+                without_prediction: totalMembers,
+                high_risk_count: 0,
+                avg_risk_score: 0,
+                negative_feedback_students_30d: 0,
+            },
+            risk_label_breakdown: [
+                { risk_label: 0, count: 0 },
+                { risk_label: 1, count: 0 },
+            ],
+            notifications_by_type_30d: [],
+        };
+
+        if (totalMembers > 0) {
+            const [riskLatestAll, negDistinct, notifByType] = await Promise.all([
+                RiskPrediction.aggregate([
+                    { $match: { student_user_id: { $in: allStudentIds } } },
+                    { $sort: { predicted_at: -1 } },
+                    {
+                        $group: {
+                            _id: "$student_user_id",
+                            latest: { $first: "$$ROOT" },
+                        },
+                    },
+                ]),
+                Feedback.distinct("student_user_id", {
+                    student_user_id: { $in: allStudentIds },
+                    sentiment_label: "NEGATIVE",
+                    submitted_at: { $gte: since30 },
+                }),
+                Notification.aggregate([
+                    {
+                        $match: {
+                            recipient_user_id: advisorOid,
+                            sent_at: { $gte: since30 },
+                        },
+                    },
+                    { $group: { _id: "$type", count: { $sum: 1 } } },
+                ]),
+            ]);
+
+            let countLabel0 = 0;
+            let countLabel1 = 0;
+            let sumScore = 0;
+            let highRisk = 0;
+            for (const row of riskLatestAll) {
+                const r = row.latest;
+                if (r.risk_label === 0) countLabel0 += 1;
+                else if (r.risk_label === 1) countLabel1 += 1;
+                sumScore += r.risk_score;
+                if (r.risk_score >= riskThreshold) highRisk += 1;
+            }
+            const withPred = riskLatestAll.length;
+            const avgRisk = withPred ? sumScore / withPred : 0;
+
+            class_analytics = {
+                totals: {
+                    members: totalMembers,
+                    with_prediction: withPred,
+                    without_prediction: Math.max(0, totalMembers - withPred),
+                    high_risk_count: highRisk,
+                    avg_risk_score: Number(avgRisk.toFixed(4)),
+                    negative_feedback_students_30d: negDistinct.length,
+                },
+                risk_label_breakdown: [
+                    { risk_label: 0, count: countLabel0 },
+                    { risk_label: 1, count: countLabel1 },
+                ],
+                notifications_by_type_30d: notifByType.map((x) => ({
+                    type: x._id,
+                    count: x.count,
+                })),
             };
         }
 
@@ -167,6 +254,7 @@ class DashboardService {
             advisor_user_id: advisorUserId,
             student_table,
             recent_alerts: recentAlerts,
+            class_analytics: class_analytics,
             pagination: {
                 page,
                 limit,
