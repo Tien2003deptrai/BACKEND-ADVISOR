@@ -13,7 +13,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--text", required=True, help="Input feedback_text")
     parser.add_argument(
         "--config",
-        default="ml/configs/sentiment_train.yaml",
+        default="ml/sentiment/configs/sentiment_train.yaml",
         help="Path to yaml config",
     )
     parser.add_argument(

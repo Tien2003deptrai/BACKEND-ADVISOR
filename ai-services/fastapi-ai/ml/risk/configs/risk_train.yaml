@@ -1,0 +1,31 @@
+seed: 42
+
+data:
+  train_file: ml/risk/data/risk_train.csv
+  valid_file: ml/risk/data/risk_valid.csv
+  test_file: ml/risk/data/risk_test.csv
+  feature_columns:
+    - gpa_current
+    - attendance_rate
+    - num_failed
+    - stress_level
+    - motivation_score
+    - shcvht_participation
+    - study_hours
+    - sentiment_score
+  label_column: risk_label
+
+model:
+  name: risk-random-forest
+  params:
+    n_estimators: 300
+    max_depth: 8
+    min_samples_split: 2
+    min_samples_leaf: 1
+    class_weight: balanced
+    n_jobs: -1
+
+train:
+  output_dir: ml/risk/artifacts/checkpoints/risk-rf
+  low_threshold: 0.33
+  high_threshold: 0.66

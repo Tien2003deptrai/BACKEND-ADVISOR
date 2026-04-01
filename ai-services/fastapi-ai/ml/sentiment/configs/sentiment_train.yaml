@@ -10,15 +10,15 @@ model:
     - POSITIVE
 
 data:
-  train_file: ml/data/sentiment_train.csv
-  valid_file: ml/data/sentiment_valid.csv
-  test_file: ml/data/sentiment_test.csv
+  train_file: ml/sentiment/data/sentiment_train.csv
+  valid_file: ml/sentiment/data/sentiment_valid.csv
+  test_file: ml/sentiment/data/sentiment_test.csv
   text_column: feedback_text
   label_column: sentiment_label
   max_length: 256
 
 train:
-  output_dir: ml/artifacts/checkpoints/phobert-sentiment
+  output_dir: ml/sentiment/artifacts/checkpoints/phobert-sentiment
   batch_size: 16
   learning_rate: 2.0e-5
   num_train_epochs: 3

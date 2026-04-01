@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate trained sentiment checkpoint.")
     parser.add_argument(
         "--config",
-        default="ml/configs/sentiment_train.yaml",
+        default="ml/sentiment/configs/sentiment_train.yaml",
         help="Path to yaml config",
     )
     parser.add_argument(

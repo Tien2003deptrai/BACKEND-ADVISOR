@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train PhoBERT sentiment classifier (AI-02).")
     parser.add_argument(
         "--config",
-        default="ml/configs/sentiment_train.yaml",
+        default="ml/sentiment/configs/sentiment_train.yaml",
         help="Path to yaml config",
     )
     return parser.parse_args()

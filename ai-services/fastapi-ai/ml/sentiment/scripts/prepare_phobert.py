@@ -3,7 +3,7 @@ from pathlib import Path
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 BASE_MODEL = "vinai/phobert-base"
-TARGET_DIR = Path("ml/artifacts/checkpoints/phobert-base-initial")
+TARGET_DIR = Path("ml/sentiment/artifacts/checkpoints/phobert-base-initial")
 NUM_LABELS = 3
 
 

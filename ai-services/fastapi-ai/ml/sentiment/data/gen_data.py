@@ -17,7 +17,9 @@ OUTPUT_DIR = Path(__file__).resolve().parent
 SEED = 42
 random.seed(SEED)
 
-COUNTS = {"POSITIVE": 334, "NEUTRAL": 333, "NEGATIVE": 333}
+TRAIN_N = 1000
+TEST_N = 100
+VAL_N = 100
 
 
 FIXED: list[tuple[str, str]] = [
@@ -327,6 +329,16 @@ def collect_unique_texts(per_label: dict[str, int]) -> dict[str, list[str]]:
     return result
 
 
+def build_counts(total: int) -> dict[str, int]:
+    labels = ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+    base = total // len(labels)
+    remainder = total % len(labels)
+    counts = {label: base for label in labels}
+    for label in labels[:remainder]:
+        counts[label] += 1
+    return counts
+
+
 def stratified_split(
     labeled: dict[str, list[str]], train_n: int, test_n: int, val_n: int
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -394,15 +406,17 @@ def stratified_split(
 
 
 def main():
-    labeled = collect_unique_texts(COUNTS)
+    total = TRAIN_N + TEST_N + VAL_N
+    counts = build_counts(total)
+    labeled = collect_unique_texts(counts)
 
-    train_df, test_df, val_df = stratified_split(labeled, 800, 100, 100)
+    train_df, test_df, val_df = stratified_split(labeled, TRAIN_N, TEST_N, VAL_N)
 
     train_df.to_csv(OUTPUT_DIR / "sentiment_train.csv", index=False, encoding="utf-8-sig", quoting=csv.QUOTE_ALL)
     test_df.to_csv(OUTPUT_DIR / "sentiment_test.csv", index=False, encoding="utf-8-sig", quoting=csv.QUOTE_ALL)
     val_df.to_csv(OUTPUT_DIR / "sentiment_valid.csv", index=False, encoding="utf-8-sig", quoting=csv.QUOTE_ALL)
 
-    print("Done. Dataset V2 created.")
+    print(f"Done. Dataset created: train={len(train_df)}, test={len(test_df)}, valid={len(val_df)}")
 
 if __name__ == "__main__":
     main()

@@ -17,7 +17,7 @@ def _try_load_trained_model():
 
     checkpoint = os.getenv(
         "SENTIMENT_MODEL_DIR",
-        "ml/artifacts/checkpoints/phobert-sentiment/final",
+        "ml/sentiment/artifacts/checkpoints/phobert-sentiment/final",
     )
     checkpoint_path = Path(checkpoint)
     if not checkpoint_path.exists():

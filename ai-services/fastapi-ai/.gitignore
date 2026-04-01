@@ -2,5 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .env
-ml/artifacts/checkpoints/*
-!ml/artifacts/checkpoints/.gitkeep
+ml/risk/artifacts/checkpoints/*
+!ml/risk/artifacts/checkpoints/.gitkeep
+ml/sentiment/artifacts/checkpoints/*
+!ml/sentiment/artifacts/checkpoints/.gitkeep

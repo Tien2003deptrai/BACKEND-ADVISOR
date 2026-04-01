@@ -39,9 +39,13 @@ Copy `.env.example` thanh `.env` va sua lai theo he thong cua ban.
 
 ## 5) Ghi chu
 
+Service risk se uu tien model da train:
+- Set `RISK_MODEL_DIR` (default `ml/risk/artifacts/checkpoints/risk-rf/final`)
+- Neu khong tim thay model, API `/api/v1/risk/predict` se fallback `risk-baseline`
+
 Service sentiment bat buoc dung checkpoint da train:
 - Set `SENTIMENT_MODEL_DIR` (hoac dung default)
 - Neu khong co checkpoint, API `/api/v1/sentiment/classify` se tra `503`
 
-Tai lieu training AI-02 xem tai:
+Tai lieu training AI-01 va AI-02 xem tai:
 - `ml/README.md`
