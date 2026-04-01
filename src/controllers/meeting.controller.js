@@ -10,6 +10,15 @@ class MeetingController {
         }
     }
 
+    async getInfoMeeting(req, res, next) {
+        try {
+            const result = await meetingService.getInfoMeeting(req.body, req.user?.userId);
+            return res.status(200).json({ message: "Get meeting info successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async createMeeting(req, res, next) {
         try {
             const role = req.user?.role;

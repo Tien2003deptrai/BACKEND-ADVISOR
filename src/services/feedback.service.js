@@ -5,6 +5,7 @@ const throwError = require("../utils/throwError");
 
 const AI_SERVICE_BASE_URL = process.env.AI_SERVICE_BASE_URL || "http://127.0.0.1:8001/api/v1";
 const AI_SERVICE_TIMEOUT_MS = Number(process.env.AI_SERVICE_TIMEOUT_MS || 10000);
+const ALLOWED_SENTIMENTS = ["POSITIVE", "NEUTRAL", "NEGATIVE"];
 
 class FeedbackService {
     async classifySentimentViaAI({ meetingId, studentUserId, feedbackText }) {
@@ -91,11 +92,26 @@ class FeedbackService {
             throwError("feedback must be submitted within 24 hours after meeting ends", 422);
         }
 
-        const { sentimentLabel, sentimentScore } = await this.classifySentimentViaAI({
-            meetingId: meeting._id,
-            studentUserId,
-            feedbackText: data.feedback_text,
-        });
+        let sentimentLabel = "NEUTRAL";
+        let sentimentScore = 0;
+        const clientSentiment = typeof data.sentiment_label === "string" ? data.sentiment_label : "";
+
+        if (ALLOWED_SENTIMENTS.includes(clientSentiment)) {
+            sentimentLabel = clientSentiment;
+        } else {
+            try {
+                const classified = await this.classifySentimentViaAI({
+                    meetingId: meeting._id,
+                    studentUserId,
+                    feedbackText: data.feedback_text,
+                });
+                sentimentLabel = classified.sentimentLabel;
+                sentimentScore = classified.sentimentScore;
+            } catch (error) {
+                // Do not block feedback creation when AI service is unavailable.
+                console.warn("AI sentiment unavailable, fallback to NEUTRAL:", error?.message || error);
+            }
+        }
 
         let created;
         try {
