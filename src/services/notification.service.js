@@ -5,6 +5,7 @@ const Feedback = require("../models/feedback.model");
 const AdvisorClass = require("../models/advisorClass.model");
 const ClassMember = require("../models/classMember.model");
 const User = require("../models/user.model");
+const Term = require("../models/term.model");
 
 class NotificationService {
     async createNotification(payload) {
@@ -26,7 +27,7 @@ class NotificationService {
             type: payload.type,
             title: payload.title,
             content: payload.content,
-            term_code: payload.term_code,
+            term_id: payload.term_id,
             ref: payload.ref,
             is_read: false,
             sent_at: now,
@@ -111,7 +112,8 @@ class NotificationService {
                 is_latest: true,
                 risk_score: { $gte: riskThreshold },
             })
-                .select("_id student_user_id risk_score term_code predicted_at")
+                .select("_id student_user_id risk_score term_id predicted_at")
+                .populate("term_id", "term_code")
                 .sort({ predicted_at: -1 }),
             Feedback.find({
                 student_user_id: { $in: studentIds },
@@ -131,6 +133,14 @@ class NotificationService {
                 .sort({ detected_at: -1 }),
         ]);
 
+        const anomalyTermCodes = Array.from(
+            new Set(anomalyRows.map((row) => String(row.term_code || "").trim().toUpperCase()).filter(Boolean))
+        );
+        const termsByCode = anomalyTermCodes.length
+            ? await Term.find({ term_code: { $in: anomalyTermCodes } }).select("_id term_code")
+            : [];
+        const termIdByCode = new Map(termsByCode.map((term) => [String(term.term_code || "").trim().toUpperCase(), term._id]));
+
         for (const risk of riskRows) {
             const key = String(risk.student_user_id);
             const advisorId = advisorByStudent.get(key);
@@ -141,7 +151,7 @@ class NotificationService {
                 type: "RISK_ALERT",
                 title: "High risk student detected",
                 content: `Student ${studentCodeById.get(key) || key} has risk_score=${risk.risk_score.toFixed(2)}`,
-                term_code: risk.term_code,
+                term_id: risk.term_id?._id,
                 ref: {
                     collection_name: "risk_predictions",
                     doc_id: risk._id,
@@ -180,7 +190,7 @@ class NotificationService {
                 type: "ANOMALY_ALERT",
                 title: "High severity anomaly",
                 content: `Student ${studentCodeById.get(key) || studentNameById.get(key) || key} has anomaly ${anomaly.alert_type}`,
-                term_code: anomaly.term_code,
+                term_id: termIdByCode.get(String(anomaly.term_code || "").trim().toUpperCase()),
                 ref: {
                     collection_name: "anomaly_alerts",
                     doc_id: anomaly._id,

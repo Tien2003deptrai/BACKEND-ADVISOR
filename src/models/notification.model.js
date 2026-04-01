@@ -23,7 +23,11 @@ const notificationSchema = new mongoose.Schema(
         },
         title: { type: String, trim: true },
         content: { type: String, trim: true },
-        term_code: { type: String, trim: true, index: true },
+        term_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Term",
+            index: true,
+        },
         ref: { type: refSchema, default: undefined },
         is_read: { type: Boolean, default: false },
         sent_at: { type: Date, required: true, default: Date.now },

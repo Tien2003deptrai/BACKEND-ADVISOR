@@ -20,7 +20,8 @@ class DashboardService {
         const [risk, academicRecords, sentimentTrend] = await Promise.all([
             RiskPrediction.findOne({ student_user_id: studentUserId, is_latest: true })
                 .sort({ predicted_at: -1 })
-                .select("student_user_id term_code risk_score risk_label model_name predicted_at"),
+                .select("student_user_id term_id risk_score risk_label model_name predicted_at")
+                .populate("term_id", "term_code"),
             AcademicRecord.find({ student_user_id: studentUserId })
                 .sort({ recorded_at: -1 })
                 .limit(historyLimit)
@@ -46,7 +47,8 @@ class DashboardService {
             student_user_id: studentUserId,
             risk_score: risk?.risk_score ?? null,
             risk_label: risk?.risk_label ?? null,
-            risk_term_code: risk?.term_code ?? null,
+            risk_term_id: risk?.term_id?._id ?? null,
+            risk_term_code: risk?.term_id?.term_code ?? null,
             academic_trend: academicRecords.reverse(),
             sentiment_trend: sentimentTrend,
         };

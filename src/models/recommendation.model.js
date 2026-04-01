@@ -8,7 +8,12 @@ const recommendationSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
-        term_code: { type: String, required: true, trim: true, index: true },
+        term_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Term",
+            required: true,
+            index: true,
+        },
         risk_prediction_id: { type: mongoose.Schema.Types.ObjectId, ref: "RiskPrediction" },
         title: { type: String, trim: true },
         content: { type: String, required: true, trim: true },
