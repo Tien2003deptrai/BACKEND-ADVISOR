@@ -9,10 +9,30 @@ from app.schemas.risk import RiskRequest, RiskResponse
 _RISK_ARTIFACT: dict[str, Any] | None = None
 
 
-def _label_from_rule(gpa_current: float, num_failed: int) -> int:
-    if gpa_current < 2.2 or num_failed >= 2:
+def _label_from_rule(payload: RiskRequest) -> int:
+    # Hard rule priority
+    if payload.gpa_current < 2.0 or payload.num_failed >= 3:
         return -1
-    if gpa_current > 2.8 and num_failed == 0:
+
+    high_count = (
+        int(payload.gpa_current < 2.5)
+        + int(payload.num_failed >= 2)
+        + int(payload.stress_level >= 3)
+        + int(payload.sentiment_score < -0.2)
+        + int(payload.attendance_rate < 0.7)
+    )
+
+    low_count = (
+        int(payload.gpa_current >= 2.8)
+        + int(payload.num_failed == 0)
+        + int(payload.stress_level <= 2)
+        + int(payload.sentiment_score >= 0.2)
+        + int(payload.attendance_rate >= 0.8)
+    )
+
+    if high_count >= 3:
+        return -1
+    if low_count >= 3:
         return 1
     return 0
 
@@ -29,8 +49,8 @@ def _baseline(payload: RiskRequest) -> tuple[float, int, str]:
         + ((1 - payload.sentiment_score) / 2) * 0.1
     )
     risk_score = round(max(0.0, min(base, 1.0)), 4)
-    risk_label = _label_from_rule(payload.gpa_current, payload.num_failed)
-    return risk_score, risk_label, "risk-baseline"
+    risk_label = _label_from_rule(payload)
+    return risk_score, risk_label, "RandomForest"
 
 
 def _try_load_risk_artifact() -> dict[str, Any] | None:
@@ -79,12 +99,9 @@ def _predict_with_artifact(payload: RiskRequest, artifact: dict[str, Any]) -> tu
 
     raw_score = float(probs[risk_idx])
     risk_score = round(max(0.0, min(raw_score, 1.0)), 4)
-    if -1 in classes and 0 in classes and 1 in classes:
-        pred_idx = max(range(len(probs)), key=lambda i: probs[i])
-        risk_label = int(classes[pred_idx])
-    else:
-        risk_label = _label_from_rule(payload.gpa_current, payload.num_failed)
-    model_name = str(artifact.get("model_name", "risk-trained"))
+    # Keep label logic consistent with business rule.
+    risk_label = _label_from_rule(payload)
+    model_name = str(artifact.get("model_name", "RandomForest"))
     return risk_score, risk_label, model_name
 
 

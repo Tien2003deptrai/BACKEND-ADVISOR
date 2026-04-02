@@ -14,7 +14,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 
 OUTPUT_DIR = Path(__file__).resolve().parent
-SEED = 42
+SEED = 69
 random.seed(SEED)
 
 TRAIN_N = 1000
@@ -93,6 +93,28 @@ FIXED: list[tuple[str, str]] = [
 # ---------------------------------------------------------------------------
 # Template có slot – đa dạng cấu trúc câu
 # ---------------------------------------------------------------------------
+PERSONAL_TEMPLATES = {
+    "POSITIVE": [
+        "Dạo này tinh thần em khá ổn nên khi học {topic} em cảm thấy {feeling} hơn rất nhiều so với trước đây.",
+        "Nhờ {life_reason} nên em có năng lượng học {topic} và thấy {feeling} rõ rệt.",
+        "Gần đây em sắp xếp được thời gian cá nhân nên việc học {topic} trở nên {feeling} hơn.",
+        "Tâm trạng em tốt hơn trước nên khi học {topic} em thấy {feeling} và dễ tập trung hơn.",
+    ],
+    "NEUTRAL": [
+        "Dạo này sinh hoạt của em {life_state} nên việc học {topic} chỉ ở mức {feeling}, chưa có gì nổi bật.",
+        "Em vẫn đang cố cân bằng giữa {life_reason} và học {topic} nên cảm thấy {feeling}.",
+        "Tình hình cá nhân của em {life_state} nên học {topic} cũng chỉ {feeling} như vậy.",
+        "Em chưa thật sự ổn định về {life_reason} nên học {topic} vẫn {feeling}.",
+    ],
+    "NEGATIVE": [
+        "Dạo này em {life_problem} nên khi học {topic} em cảm thấy {feeling} và rất khó tập trung.",
+        "Vì {life_problem} nên dù {topic} không quá khó em vẫn thấy {feeling}.",
+        "Tình trạng {life_problem} làm em học {topic} trong trạng thái {feeling} nhiều ngày nay.",
+        "Em đang bị {life_problem} nên việc theo kịp {topic} khiến em {feeling} thật sự.",
+    ],
+}
+
+
 TEMPLATES_POS = [
     "Em thấy {feeling} khi học {topic}, thầy/cô giải thích dễ hiểu lắm.",
     "{topic} thật ra không khó như em nghĩ, em thấy {feeling}.",
@@ -147,6 +169,32 @@ TEMPLATES_NEG = [
 # ---------------------------------------------------------------------------
 # Slot values – đa dạng, có cả cụm từ kiểu sinh viên thật
 # ---------------------------------------------------------------------------
+PERSONAL_SLOTS = {
+    "life_reason": [
+        "việc sắp xếp thời gian hợp lý hơn",
+        "giảm bớt việc làm thêm",
+        "ngủ đủ giấc hơn trước",
+        "tâm lý thoải mái hơn",
+        "ít áp lực từ gia đình hơn",
+    ],
+    "life_state": [
+        "không quá ổn định",
+        "hơi rối một chút",
+        "khá bận rộn",
+        "thiếu ngủ thường xuyên",
+        "khá mệt mỏi",
+    ],
+    "life_problem": [
+        "thiếu ngủ liên tục",
+        "áp lực từ việc làm thêm",
+        "chuyện gia đình làm em phân tâm",
+        "mất động lực học tập",
+        "stress kéo dài nhiều ngày",
+        "tâm trạng không ổn định",
+    ],
+}
+
+
 SLOTS: dict[str, dict[str, list[str]]] = {
     "POSITIVE": {
         "feeling": [
@@ -302,6 +350,31 @@ def gen_from_templates(label: str) -> list[str]:
     random.shuffle(out)
     return out
 
+def gen_personal_context(label: str) -> list[str]:
+    templates = PERSONAL_TEMPLATES[label]
+    base_slots = SLOTS[label]
+    out = []
+
+    for tpl in templates:
+        for topic in base_slots["topic"]:
+            for feeling in base_slots["feeling"]:
+                for k, arr in PERSONAL_SLOTS.items():
+                    for val in arr:
+                        try:
+                            text = tpl.format(
+                                topic=topic,
+                                feeling=feeling,
+                                life_reason=val,
+                                life_state=val,
+                                life_problem=val,
+                            )
+                            if len(text.split()) >= 20:
+                                out.append(text)
+                        except KeyError:
+                            pass
+    random.shuffle(out)
+    return out
+
 
 def collect_unique_texts(per_label: dict[str, int]) -> dict[str, list[str]]:
     result = {k: [] for k in per_label}
@@ -321,7 +394,12 @@ def collect_unique_texts(per_label: dict[str, int]) -> dict[str, list[str]]:
         for txt in gen_contrast(lab):
             push(lab, txt)
 
-    # 3. Templates
+    # 3. Personal context
+    for lab in per_label:
+        for txt in gen_personal_context(lab):
+            push(lab, txt)
+
+    # 4. Templates
     for lab in per_label:
         for txt in gen_from_templates(lab):
             push(lab, txt)

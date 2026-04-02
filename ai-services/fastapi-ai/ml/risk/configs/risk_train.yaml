@@ -16,7 +16,7 @@ data:
   label_column: risk_label
 
 model:
-  name: risk-random-forest
+  name: RandomForest
   params:
     n_estimators: 300
     max_depth: 8

@@ -16,7 +16,7 @@ const riskPredictionSchema = new mongoose.Schema(
         },
         risk_score: { type: Number, required: true, min: 0, max: 1 },
         risk_label: { type: Number, enum: [-1, 0, 1], required: true },
-        model_name: { type: String, default: "XGBoost" },
+        model_name: { type: String, default: "RandomForest" },
         predicted_at: { type: Date, required: true, default: Date.now },
         is_latest: { type: Boolean, default: true },
     },

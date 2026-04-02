@@ -1,11 +1,11 @@
 # AI-02 Sentiment
 
-Folder nay chua toan bo tai nguyen cho AI-02:
+Folder này chứa toàn bộ tài nguyên cho AI-02:
 
-- `configs/` cau hinh train/eval
-- `data/` du lieu sentiment
+- `configs/` cấu hình train/eval
+- `data/` dữ liệu sentiment
 - `scripts/` script prepare/train/eval/predict
-- `artifacts/` checkpoint model da train
+- `artifacts/` checkpoint model đã train
 
-Xem cach chay trong `ml/README.md`.
+Xem cách chạy trong `ml/README.md`.
 

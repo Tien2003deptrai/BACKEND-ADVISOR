@@ -1,6 +1,6 @@
 # ML Training Guide (AI-01 + AI-02)
 
-## 1) Cai dependencies train
+## 1) Cài dependencies train
 
 ```bash
 cd ai-services/fastapi-ai
@@ -11,14 +11,14 @@ uv sync --group train
 
 ## 2) Train AI-01 (Risk Prediction)
 
-### 2.1 Chuan bi du lieu AI-01
+### 2.1 Chuẩn bị dữ liệu AI-01
 
-Dat file CSV vao:
+Đặt file CSV vào:
 - `ml/risk/data/risk_train.csv`
 - `ml/risk/data/risk_valid.csv`
-- `ml/risk/data/risk_test.csv` (khuyen nghi)
+- `ml/risk/data/risk_test.csv` (khuyên nghị)
 
-Cot bat buoc:
+Cột bắt buộc:
 - `gpa_current` (0..4)
 - `attendance_rate` (0..1)
 - `num_failed` (0..5)
@@ -29,16 +29,39 @@ Cot bat buoc:
 - `sentiment_score` (-1..1)
 - `risk_label` (-1/0/1; High/Medium/Low)
 
-Rule gan nhan de thong nhat:
-- `-1 (High)`: `gpa_current < 2.2` hoac `num_failed >= 2`
-- `0 (Medium)`: con lai
-- `1 (Low)`: `gpa_current > 2.8` va `num_failed = 0`
+Rule gán nhãn để thống nhất:
+- Hard rule ưu tiên:
+  - `-1 (High)` nếu `gpa_current < 2.0` hoặc `num_failed >= 3`
+- High indicators:
+  - `gpa_current < 2.5`
+  - `num_failed >= 2`
+  - `stress_level >= 3`
+  - `sentiment_score < -0.2`
+  - `attendance_rate < 0.7`
+- Low indicators:
+  - `gpa_current >= 2.8`
+  - `num_failed == 0`
+  - `stress_level <= 2`
+  - `sentiment_score >= 0.2`
+  - `attendance_rate >= 0.8`
+- Gán nhãn:
+  - `-1 (High)`: hard rule hoặc `high_count >= 3`
+  - `1 (Low)`: `low_count >= 3` (nếu chưa là High)
+  - `0 (Medium)`: các trường hợp còn lại
 
-Neu muon tao du lieu mau de test nhanh:
+Nếu muốn tạo dữ liệu mẫu để test nhanh:
 
 ```bash
 uv run python ml/risk/data/gen_risk_data.py
 ```
+
+Check nhanh phân bố nhãn:
+
+```bash
+uv run python ml/risk/data/check_risk_data.py
+```
+
+Output sẽ hiển thị số lượng và tỉ lệ (%) của từng nhãn `-1/0/1` cho `train/valid/test`.
 
 ### 2.2 Train AI-01
 
@@ -55,35 +78,43 @@ Output checkpoint:
 uv run python ml/risk/scripts/eval_risk.py --config ml/risk/configs/risk_train.yaml
 ```
 
-### 2.4 Predict nhanh 1 mau AI-01
+### 2.4 Predict bằng file sửa trực tiếp
+
+Mở file:
+- `ml/risk/scripts/predict_risk_edit_input.py`
+
+Sửa các số trong biến `PAYLOAD`, sau đó chạy:
 
 ```bash
-uv run python ml/risk/scripts/predict_risk.py ^
-  --gpa_current 2.1 ^
-  --attendance_rate 0.72 ^
-  --num_failed 2 ^
-  --stress_level 4 ^
-  --motivation_score 2 ^
-  --shcvht_participation 0.6 ^
-  --study_hours 12 ^
-  --sentiment_score -0.2
+uv run python ml/risk/scripts/predict_risk_edit_input.py
 ```
+
+Script sẽ in:
+- `Input payload`
+- `risk_score`
+- `risk_label`
 
 ## 3) Train AI-02 (Sentiment PhoBERT)
 
-### 3.1 Chuan bi du lieu AI-02
+### 3.1 Chuẩn bị dữ liệu AI-02
 
-Dat file CSV vao:
+Đặt file CSV vào:
 - `ml/sentiment/data/sentiment_train.csv`
 - `ml/sentiment/data/sentiment_valid.csv`
-- `ml/sentiment/data/sentiment_test.csv` (khuyen nghi)
+- `ml/sentiment/data/sentiment_test.csv` (khuyến nghị)
 
-Cot bat buoc:
+Cột bắt buộc:
 - `feedback_text`
 - `sentiment_label` (`NEGATIVE`, `NEUTRAL`, `POSITIVE`)
 
-Cot optional:
+Cột optional:
 - `rating`
+
+Nếu muốn tạo dữ liệu mẫu để test nhanh:
+
+```bash
+uv run python ml/sentiment/data/gen_data.py
+```
 
 ### 3.2 Prepare PhoBERT base
 
@@ -115,12 +146,12 @@ uv run python ml/sentiment/scripts/eval_sentiment.py --config ml/sentiment/confi
 uv run python ml/sentiment/scripts/predict_sentiment.py --text "Buoi SHCVHT rat huu ich"
 ```
 
-## 4) Score mapping mac dinh (AI-02)
+## 4) Score mapping mặc định (AI-02)
 
-`feedback_score = P(POSITIVE) - P(NEGATIVE)`  
-Gia tri nam trong `[-1, 1]`.
+`feedback_score = P(NEGATIVE) - P(POSITIVE)`  
+Giá trị nằm trong `[-1, 1]`.
 
-## 5) Dung checkpoint trong FastAPI
+## 5) Dùng checkpoint trong FastAPI
 
 Set env cho AI-01:
 - `RISK_MODEL_DIR=ml/risk/artifacts/checkpoints/risk-rf/final`
@@ -128,5 +159,5 @@ Set env cho AI-01:
 Set env:
 - `SENTIMENT_MODEL_DIR=ml/sentiment/artifacts/checkpoints/phobert-sentiment/final`
 
-Neu khong co checkpoint sentiment, service sentiment tra loi `503 model not ready`.
-Neu khong co checkpoint risk, service risk fallback sang `risk-baseline`.
+Nếu không có checkpoint sentiment, service sentiment trả lời `503 model not ready`.
+Nếu không có checkpoint risk, service risk fallback sang `risk-baseline`.
