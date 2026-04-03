@@ -1,10 +1,10 @@
 # Dashboard Flow (AI-01 + AI-02)
 
 ## 1) Scope
-Tai lieu mo ta luong dashboard hien tai:
-- `STUDENT`: chi xem dashboard cua chinh minh
-- `ADVISOR`: chi xem dashboard cua chinh advisor do
-- Chi hien thi du lieu lien quan `risk` va `sentiment` (anomaly tam an)
+Tài liệu mô tả luồng dashboard hiện tại:
+- `STUDENT`: chỉ xem dashboard của chính mình
+- `ADVISOR`: chỉ xem dashboard của chính advisor đó
+- Chỉ hiển thị dữ liệu liên quan `risk` và `sentiment` (anomaly tạm ẩn)
 
 ## 2) Student Dashboard Sequence
 ```mermaid
@@ -13,11 +13,11 @@ sequenceDiagram
     participant API as Backend API
     participant DB as MongoDB
 
-    S->>API: GET /api/dashboard/student (JWT STUDENT)
-    API->>API: Lay student_user_id tu token
+    S->>API: POST /api/dashboard/student (JWT STUDENT)
+    API->>API: Lấy student_user_id từ token
     API->>DB: Query risk_predictions (latest theo student)
-    API->>DB: Query academic_records (history theo student)
-    API->>DB: Aggregate feedbacks -> sentiment_trend theo thang
+    API->>DB: Query academic_records (history theo term, theo student)
+    API->>DB: Aggregate feedbacks -> sentiment_trend theo tháng
     DB-->>API: risk + academic_trend + sentiment_trend
     API-->>S: 200 { risk_score, risk_label, academic_trend, sentiment_trend }
 ```
@@ -29,38 +29,45 @@ sequenceDiagram
     participant API as Backend API
     participant DB as MongoDB
 
-    A->>API: GET /api/dashboard/advisor (JWT ADVISOR)
-    API->>API: Lay advisor_user_id tu token
-    API->>API: generateAlerts (risk + sentiment)
-    API->>DB: Tim advisor_classes theo advisor_user_id
-    API->>DB: Tim class_members ACTIVE theo class_id
+    A->>API: POST /api/dashboard/advisor (JWT ADVISOR)
+    API->>API: Lấy advisor_user_id từ token
+    API->>DB: Tìm advisor_classes theo advisor_user_id
+    API->>DB: Tìm class_members ACTIVE theo class_id
     API->>DB: Query users (student profile)
     API->>DB: Query latest risk_predictions theo student
-    API->>DB: Aggregate feedbacks NEGATIVE 30 ngay
-    API->>DB: Query notifications type in [RISK_ALERT, SENTIMENT_ALERT]
-    DB-->>API: student_table + recent_alerts
-    API-->>A: 200 { student_table, recent_alerts, pagination }
+    API->>DB: Query alert OPEN type in [RISK, SENTIMENT]
+    API->>DB: Query notifications theo recipient_user_id + populate alert_id
+    DB-->>API: student_table + alert_cards + risk_alerts + sentiment_alerts + recent_alerts
+    API-->>A: 200 { student_table, alert_cards, risk_alerts, sentiment_alerts, recent_alerts, pagination }
 ```
 
-## 4) Payload chinh
+## 4) Payload chính
 ### 4.1 Student dashboard
 - `risk_score`
 - `risk_label`
 - `academic_trend`
 - `sentiment_trend`
 
+Ghi chú:
+- `academic_trend`: lịch sử học tập theo từng `term_id` (không phải log từng lần nhập trong cùng 1 kỳ).
+- `sentiment_trend`: dữ liệu aggregate theo tháng và `sentiment_label`.
+
 ### 4.2 Advisor dashboard
 - `student_table[]`
   - `student_user_id`, `student_code`, `full_name`, `email`
   - `risk_score`, `risk_label`
-  - `alerts.negative_sentiment_30d`
-  - `alerts.high_risk`
+  - `alerts.negative_sentiment_30d` (số lượng `SENTIMENT` alert `OPEN` của SV)
+  - `alerts.high_risk` (số lượng `RISK` alert `OPEN` của SV)
   - `alert_count` = `negative_sentiment_30d + high_risk`
-- `recent_alerts` (chi `RISK_ALERT`, `SENTIMENT_ALERT`)
+- `alert_cards`
+  - `risk_open`
+  - `sentiment_open`
+- `risk_alerts` (top 20, từ `alert` OPEN)
+- `sentiment_alerts` (top 20, từ `alert` OPEN)
+- `recent_alerts` (top 20, lọc theo `alert_id.alert_type` trong `notifications`)
 - `pagination`
 
-## 5) Rule quyen truy cap
-- `/api/dashboard/student`: chi role `STUDENT`
-- `/api/dashboard/advisor`: chi role `ADVISOR`
-- Khong cho override `student_user_id` hoac `advisor_user_id` qua body
-
+## 5) Rule quyền truy cập
+- `/api/dashboard/student`: chỉ role `STUDENT`
+- `/api/dashboard/advisor`: chỉ role `ADVISOR`
+- Không cho override `student_user_id` hoặc `advisor_user_id` qua body

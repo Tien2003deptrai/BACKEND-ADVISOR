@@ -1,13 +1,5 @@
 const mongoose = require("mongoose");
 
-const refSchema = new mongoose.Schema(
-    {
-        collection_name: { type: String, required: true, alias: "collection" },
-        doc_id: { type: mongoose.Schema.Types.ObjectId, required: true },
-    },
-    { _id: false }
-);
-
 const notificationSchema = new mongoose.Schema(
     {
         recipient_user_id: {
@@ -16,21 +8,16 @@ const notificationSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
-        type: {
-            type: String,
-            enum: ["RISK_ALERT", "SENTIMENT_ALERT", "ANOMALY_ALERT", "SYSTEM"],
-            required: true,
-        },
-        title: { type: String, trim: true },
-        content: { type: String, trim: true },
-        term_id: {
+        alert_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Term",
+            ref: "Alert",
+            required: true,
             index: true,
         },
-        ref: { type: refSchema, default: undefined },
+        title: { type: String, required: true, trim: true },
+        content: { type: String, required: true, trim: true },
         is_read: { type: Boolean, default: false },
-        sent_at: { type: Date, required: true, default: Date.now },
+        sent_at: { type: Date, default: Date.now },
         read_at: { type: Date },
     },
     { timestamps: true, collection: "notifications" }

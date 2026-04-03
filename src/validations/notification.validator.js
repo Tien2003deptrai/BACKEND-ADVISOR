@@ -7,6 +7,10 @@ class NotificationValidator {
         body("type")
             .optional()
             .isIn(["RISK_ALERT", "SENTIMENT_ALERT", "ANOMALY_ALERT", "SYSTEM"]),
+        body("alert_type")
+            .optional()
+            .isIn(["RISK", "SENTIMENT", "ANOMALY"])
+            .withMessage("alert_type must be RISK, SENTIMENT, or ANOMALY"),
         body("page").optional().isInt({ min: 1 }).withMessage("page must be an integer >= 1"),
         body("limit")
             .optional()

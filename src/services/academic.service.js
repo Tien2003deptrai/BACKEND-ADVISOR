@@ -3,6 +3,11 @@ const RiskPrediction = require("../models/riskPrediction.model");
 const Recommendation = require("../models/recommendation.model");
 const Term = require("../models/term.model");
 const Feedback = require("../models/feedback.model");
+const Alert = require("../models/alert.model");
+const Notification = require("../models/notification.model");
+const ClassMember = require("../models/classMember.model");
+const AdvisorClass = require("../models/advisorClass.model");
+const User = require("../models/user.model");
 const mongoose = require("mongoose");
 const throwError = require("../utils/throwError");
 
@@ -203,6 +208,69 @@ class AcademicService {
         });
     }
 
+    async getAdvisorOfStudent(studentUserId) {
+        const membership = await ClassMember.findOne({
+            student_user_id: studentUserId,
+            status: "ACTIVE",
+        }).select("class_id");
+        if (!membership?.class_id) return null;
+
+        const advisorClass = await AdvisorClass.findOne({
+            _id: membership.class_id,
+            status: "ACTIVE",
+        }).select("advisor_user_id");
+
+        return advisorClass?.advisor_user_id || null;
+    }
+
+    async createRiskAlertIfNeeded({ studentUserId, termId, riskPredictionId, riskLabel, riskScore }) {
+        if (riskLabel !== -1) return null;
+
+        const severity = riskScore > 0.85 ? "HIGH" : "MEDIUM";
+        return Alert.findOneAndUpdate(
+            { risk_prediction_id: riskPredictionId, alert_type: "RISK" },
+            {
+                $setOnInsert: {
+                    student_user_id: studentUserId,
+                    term_id: termId,
+                    alert_type: "RISK",
+                    source_ai: "AI01_RISK",
+                    severity,
+                    risk_prediction_id: riskPredictionId,
+                    metadata: { risk_score: riskScore },
+                    detected_at: new Date(),
+                },
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+    }
+
+    async notifyAdvisorForAlert({ alert, studentUserId }) {
+        if (!alert?._id) return;
+
+        const advisorId = await this.getAdvisorOfStudent(studentUserId);
+        if (!advisorId) return;
+
+        const student = await User.findById(studentUserId).select("profile.full_name student_info.student_code");
+        const studentName = student?.profile?.full_name || student?.student_info?.student_code || String(studentUserId);
+
+        const dedupeSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const duplicate = await Notification.findOne({
+            recipient_user_id: advisorId,
+            alert_id: alert._id,
+            sent_at: { $gte: dedupeSince },
+        }).select("_id");
+        if (duplicate) return;
+
+        await Notification.create({
+            recipient_user_id: advisorId,
+            alert_id: alert._id,
+            title: "Cảnh báo nguy cơ học vụ",
+            content: `Sinh viên ${studentName} có nguy cơ cao về chỉ số rủi ro học tập trong học kỳ.`,
+            sent_at: new Date(),
+        });
+    }
+
     async submitAcademic(data, studentUserId) {
 
         if (!studentUserId) throwError("student_user_id is required", 422);
@@ -295,6 +363,19 @@ class AcademicService {
                 riskLabel: risk.riskLabel,
                 modelName: risk.modelName,
             });
+            const riskAlert = await this.createRiskAlertIfNeeded({
+                studentUserId,
+                termId: data.term_id,
+                riskPredictionId: riskPrediction?._id,
+                riskLabel: risk.riskLabel,
+                riskScore: risk.riskScore,
+            });
+            if (riskAlert) {
+                await this.notifyAdvisorForAlert({
+                    alert: riskAlert,
+                    studentUserId,
+                });
+            }
             await this.replaceRecommendationsForRisk({
                 studentUserId,
                 termId: data.term_id,

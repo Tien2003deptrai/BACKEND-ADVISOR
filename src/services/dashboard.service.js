@@ -3,15 +3,14 @@ const AcademicRecord = require("../models/academicRecord.model");
 const RiskPrediction = require("../models/riskPrediction.model");
 const Feedback = require("../models/feedback.model");
 const Notification = require("../models/notification.model");
-const AnomalyAlert = require("../models/anomalyAlert.model");
+const Alert = require("../models/alert.model");
 const AdvisorClass = require("../models/advisorClass.model");
 const ClassMember = require("../models/classMember.model");
 const User = require("../models/user.model");
 const throwError = require("../utils/throwError");
-const notificationService = require("./notification.service");
 
 class DashboardService {
-    async getStudentDashboard(body, currentUser) {
+    async getStudentDashboard(body = {}, currentUser) {
         const historyLimit = Number(body.history_limit || 6);
         const studentUserId = currentUser.userId;
 
@@ -54,19 +53,13 @@ class DashboardService {
         };
     }
 
-    async getAdvisorDashboard(body, currentUser) {
+    async getAdvisorDashboard(body = {}, currentUser) {
         const advisorUserId = currentUser.userId;
         if (!advisorUserId) throwError("advisor_user_id is required", 422);
-
-        await notificationService.generateAlerts({
-            risk_threshold: body.risk_threshold,
-            advisor_user_id: advisorUserId,
-        });
 
         const page = Number(body.page || 1);
         const limit = Number(body.limit || 20);
         const skip = (page - 1) * limit;
-        const riskThreshold = Number(body.risk_threshold ?? 0.7);
 
         const advisorClass = await AdvisorClass.findOne({
             advisor_user_id: advisorUserId,
@@ -101,7 +94,7 @@ class DashboardService {
             .sort({ createdAt: -1 });
 
         const studentIds = students.map((s) => s._id);
-        const [riskRows, negativeSentimentRows, recentAlerts] = await Promise.all([
+        const [riskRows, openAlerts, recentAlertsRaw] = await Promise.all([
             RiskPrediction.aggregate([
                 {
                     $match: {
@@ -116,39 +109,49 @@ class DashboardService {
                     },
                 },
             ]),
-            Feedback.aggregate([
-                {
-                    $match: {
-                        student_user_id: { $in: studentIds },
-                        sentiment_label: "NEGATIVE",
-                        submitted_at: {
-                            $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-                        },
-                    },
-                },
-                {
-                    $group: {
-                        _id: "$student_user_id",
-                        count: { $sum: 1 },
-                    },
-                },
-            ]),
+            Alert.find({
+                student_user_id: { $in: studentIds },
+                status: "OPEN",
+                alert_type: { $in: ["RISK", "SENTIMENT"] },
+            })
+                .select("_id student_user_id alert_type severity status detected_at")
+                .sort({ detected_at: -1 }),
             Notification.find({
                 recipient_user_id: advisorUserId,
-                type: { $in: ["RISK_ALERT", "SENTIMENT_ALERT"] },
             })
+                .populate("alert_id", "alert_type severity status detected_at student_user_id")
                 .sort({ sent_at: -1 })
-                .limit(20),
+                .limit(50),
         ]);
 
+        const recentAlerts = recentAlertsRaw
+            .filter((item) => ["RISK", "SENTIMENT"].includes(item.alert_id?.alert_type))
+            .slice(0, 20);
+
         const riskMap = new Map(riskRows.map((row) => [String(row._id), row.latest]));
-        const sentimentMap = new Map(negativeSentimentRows.map((row) => [String(row._id), row.count]));
+        const riskAlertCountMap = new Map();
+        const sentimentAlertCountMap = new Map();
+        const riskAlerts = [];
+        const sentimentAlerts = [];
+
+        for (const alert of openAlerts) {
+            const key = String(alert.student_user_id);
+            if (alert.alert_type === "RISK") {
+                riskAlertCountMap.set(key, (riskAlertCountMap.get(key) || 0) + 1);
+                riskAlerts.push(alert);
+                continue;
+            }
+            if (alert.alert_type === "SENTIMENT") {
+                sentimentAlertCountMap.set(key, (sentimentAlertCountMap.get(key) || 0) + 1);
+                sentimentAlerts.push(alert);
+            }
+        }
 
         const student_table = students.map((student) => {
             const key = String(student._id);
             const risk = riskMap.get(key);
-            const negativeCount = sentimentMap.get(key) || 0;
-            const highRiskCount = risk?.risk_score >= riskThreshold ? 1 : 0;
+            const negativeCount = sentimentAlertCountMap.get(key) || 0;
+            const highRiskCount = riskAlertCountMap.get(key) || 0;
 
             return {
                 student_user_id: student._id,
@@ -169,6 +172,12 @@ class DashboardService {
             advisor_user_id: advisorUserId,
             student_table,
             recent_alerts: recentAlerts,
+            alert_cards: {
+                risk_open: riskAlerts.length,
+                sentiment_open: sentimentAlerts.length,
+            },
+            risk_alerts: riskAlerts.slice(0, 20),
+            sentiment_alerts: sentimentAlerts.slice(0, 20),
             pagination: {
                 page,
                 limit,
@@ -178,7 +187,7 @@ class DashboardService {
         };
     }
 
-    async getFacultyDashboard(body) {
+    async getFacultyDashboard(body = {}) {
         const riskThreshold = Number(body.risk_threshold ?? 0.7);
         const studentFilter = { role: "STUDENT" };
         if (body.department_id) studentFilter["org.department_id"] = body.department_id;
@@ -221,7 +230,7 @@ class DashboardService {
                     },
                 },
             ]),
-            AnomalyAlert.aggregate([
+            Alert.aggregate([
                 {
                     $match: {
                         student_user_id: { $in: studentIds },

@@ -1,6 +1,10 @@
 const Feedback = require("../models/feedback.model");
 const Meeting = require("../models/meeting.model");
 const ClassMember = require("../models/classMember.model");
+const AdvisorClass = require("../models/advisorClass.model");
+const Alert = require("../models/alert.model");
+const Notification = require("../models/notification.model");
+const User = require("../models/user.model");
 const throwError = require("../utils/throwError");
 
 const AI_SERVICE_BASE_URL = process.env.AI_SERVICE_BASE_URL || "http://127.0.0.1:8001/api/v1";
@@ -61,7 +65,9 @@ class FeedbackService {
     async submitFeedback(data, studentUserId) {
         if (!studentUserId) throwError("student_user_id is required", 422);
 
-        const meeting = await Meeting.findById(data.meeting_id).select("_id class_id advisor_user_id student_user_ids meeting_end_time");
+        const meeting = await Meeting.findById(data.meeting_id).select(
+            "_id class_id advisor_user_id student_user_ids meeting_end_time term_id"
+        );
         if (!meeting) throwError("meeting not found", 404);
 
         const isInvitedStudent = meeting.student_user_ids?.some(
@@ -131,6 +137,66 @@ class FeedbackService {
                 throwError("feedback already submitted for this meeting", 409);
             }
             throw error;
+        }
+
+        if (sentimentLabel === "NEGATIVE" && sentimentScore < -0.6 && meeting.term_id) {
+            const severity = sentimentScore < -0.8 ? "HIGH" : "MEDIUM";
+            const sentimentAlert = await Alert.findOneAndUpdate(
+                { feedback_id: created._id, alert_type: "SENTIMENT" },
+                {
+                    $setOnInsert: {
+                        student_user_id: studentUserId,
+                        term_id: meeting.term_id,
+                        alert_type: "SENTIMENT",
+                        source_ai: "AI02_SENTIMENT",
+                        severity,
+                        feedback_id: created._id,
+                        metadata: { sentiment_label: sentimentLabel, feedback_score: sentimentScore },
+                        detected_at: created.submitted_at || new Date(),
+                    },
+                },
+                { new: true, upsert: true, setDefaultsOnInsert: true }
+            );
+
+            const studentMembership = await ClassMember.findOne({
+                student_user_id: sentimentAlert.student_user_id,
+                status: "ACTIVE",
+            }).select("class_id");
+
+            if (studentMembership?.class_id) {
+                const advisorClass = await AdvisorClass.findOne({
+                    _id: studentMembership.class_id,
+                    status: "ACTIVE",
+                }).select("advisor_user_id");
+
+                const advisorId = advisorClass?.advisor_user_id;
+                if (advisorId) {
+                    const student = await User.findById(sentimentAlert.student_user_id).select(
+                        "profile.full_name student_info.student_code"
+                    );
+                    const studentName =
+                        student?.profile?.full_name ||
+                        student?.student_info?.student_code ||
+                        String(sentimentAlert.student_user_id);
+
+                    const dedupeSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                    const duplicate = await Notification.findOne({
+                        recipient_user_id: advisorId,
+                        alert_id: sentimentAlert._id,
+                        sent_at: { $gte: dedupeSince },
+                    }).select("_id");
+
+                    if (!duplicate) {
+                        await Notification.create({
+                            recipient_user_id: advisorId,
+                            alert_id: sentimentAlert._id,
+                            title: "Cảnh báo cảm xúc từ sinh viên",
+                            content: `Sinh viên ${studentName} vừa gửi phản hồi có dấu hiệu tâm lý nghiêm trọng.`,
+                            sent_at: new Date(),
+                        });
+                    }
+                }
+            }
         }
 
         return created;
