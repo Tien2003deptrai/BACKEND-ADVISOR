@@ -18,6 +18,15 @@ class UserController {
             next(error);
         }
     }
+
+    async getUserInfo(req, res, next) {
+        try {
+            const result = await userService.getUserInfo(req.body, req.user);
+            return res.status(200).json({ message: "Get user info successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new UserController();
