@@ -26,6 +26,15 @@ router.post(
 );
 
 router.post(
+    "/advisor/list",
+    authMiddleware,
+    authorizeRoles("ADVISOR"),
+    meetingValidator.listMyMeetingsValidator,
+    validate,
+    meetingController.listAdvisorMeetings
+);
+
+router.post(
     "/",
     authMiddleware,
     authorizeRoles("ADVISOR"),

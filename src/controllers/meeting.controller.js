@@ -10,6 +10,15 @@ class MeetingController {
         }
     }
 
+    async listAdvisorMeetings(req, res, next) {
+        try {
+            const result = await meetingService.listAdvisorMeetings(req.body, req.user?.userId);
+            return res.status(200).json({ message: "Get advisor meetings successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getInfoMeeting(req, res, next) {
         try {
             const result = await meetingService.getInfoMeeting(req.body, req.user?.userId);

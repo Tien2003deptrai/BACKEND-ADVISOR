@@ -55,6 +55,10 @@ class UserValidator {
         body("role").optional().isString().trim(),
         body("status").optional().isString().trim(),
     ];
+
+    getUserInfoValidator = [
+        body("user_id").notEmpty().withMessage("user_id is required").isMongoId().withMessage("invalid user_id"),
+    ];
 }
 
 module.exports = new UserValidator();

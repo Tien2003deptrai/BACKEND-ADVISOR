@@ -1,5 +1,7 @@
 const User = require("../models/user.model");
 const Major = require("../models/major.model");
+const AdvisorClass = require("../models/advisorClass.model");
+const ClassMember = require("../models/classMember.model");
 const throwError = require("../utils/throwError");
 const { pick } = require("lodash");
 
@@ -95,6 +97,92 @@ class UserService {
                 total,
                 total_pages: Math.ceil(total / limit) || 1,
             },
+        };
+    }
+
+    /**
+     * Full user profile (no password) + lớp cố vấn & cố vấn chủ nhiệm.
+     * ADVISOR: chỉ xem sinh viên thuộc lớp ACTIVE do mình phụ trách.
+     */
+    async getUserInfo(body, currentUser) {
+        const targetUserId = body.user_id;
+        if (!targetUserId) throwError("user_id is required", 422);
+
+        const requesterRole = currentUser?.role;
+        const requesterId = currentUser?.userId;
+        if (!requesterId) throwError("unauthorized", 401);
+
+        if (requesterRole === "ADVISOR") {
+            const advisorClass = await AdvisorClass.findOne({
+                advisor_user_id: requesterId,
+                status: "ACTIVE",
+            }).select("_id");
+            if (!advisorClass) throwError("advisor has no active class", 403);
+
+            const inClass = await ClassMember.findOne({
+                class_id: advisorClass._id,
+                student_user_id: targetUserId,
+                status: "ACTIVE",
+            }).select("_id");
+            if (!inClass) throwError("student is not in your advisory class", 403);
+        } else if (!["ADMIN", "FACULTY"].includes(requesterRole)) {
+            throwError("forbidden", 403);
+        }
+
+        const user = await User.findById(targetUserId)
+            .select("-password_hash -token_version")
+            .populate("org.department_id", "department_code department_name")
+            .populate("org.major_id", "major_code major_name department_id")
+            .populate(
+                "student_info.advisor_user_id",
+                "username email profile.full_name advisor_info"
+            )
+            .lean();
+
+        if (!user) throwError("user not found", 404);
+
+        const memberRows = await ClassMember.find({ student_user_id: targetUserId })
+            .populate({
+                path: "class_id",
+                select: "class_code class_name status cohort_year advisor_user_id department_id major_id",
+                populate: {
+                    path: "advisor_user_id",
+                    select: "username email profile.full_name advisor_info",
+                },
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const advisor_class_memberships = memberRows.map((m) => {
+            const cls = m.class_id;
+            const adv = cls?.advisor_user_id;
+            return {
+                membership_status: m.status,
+                joined_at: m.joined_at,
+                class: cls
+                    ? {
+                          _id: cls._id,
+                          class_code: cls.class_code,
+                          class_name: cls.class_name,
+                          status: cls.status,
+                          cohort_year: cls.cohort_year,
+                      }
+                    : null,
+                advisor: adv
+                    ? {
+                          _id: adv._id,
+                          username: adv.username,
+                          email: adv.email,
+                          profile: adv.profile,
+                          advisor_info: adv.advisor_info,
+                      }
+                    : null,
+            };
+        });
+
+        return {
+            ...user,
+            advisor_class_memberships,
         };
     }
 }
