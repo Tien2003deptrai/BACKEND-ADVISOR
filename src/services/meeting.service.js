@@ -3,6 +3,8 @@ const Feedback = require("../models/feedback.model");
 const AdvisorClass = require("../models/advisorClass.model");
 const ClassMember = require("../models/classMember.model");
 const Term = require("../models/term.model");
+const { Readable } = require("stream");
+const cloudinary = require("../config/cloudinary");
 const throwError = require("../utils/throwError");
 
 class MeetingService {
@@ -22,7 +24,7 @@ class MeetingService {
                 .populate("class_id", "class_code class_name")
                 .populate("advisor_user_id", "profile.full_name advisor_info.staff_code advisor_info.title email")
                 .select(
-                    "_id class_id advisor_user_id term_id meeting_time meeting_end_time notes_summary summary_model createdAt"
+                    "_id class_id advisor_user_id term_id meeting_time meeting_end_time notes_summary summary_model file createdAt"
                 ),
             Meeting.countDocuments(filter),
         ]);
@@ -57,7 +59,7 @@ class MeetingService {
                     "username email profile.full_name student_info.student_code"
                 )
                 .select(
-                    "_id class_id student_user_ids advisor_user_id term_id meeting_time meeting_end_time notes_summary summary_model createdAt"
+                    "_id class_id student_user_ids advisor_user_id term_id meeting_time meeting_end_time notes_summary summary_model file createdAt"
                 ),
             Meeting.countDocuments(filter),
         ]);
@@ -156,7 +158,55 @@ class MeetingService {
         };
     }
 
-    async createMeeting(data, advisorUserId) {
+    async uploadMeetingFile(file) {
+        if (!file?.buffer) return null;
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+            throwError("cloudinary env is missing", 500);
+        }
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: "meetings/files",
+                    resource_type: "raw",
+                    use_filename: true,
+                    unique_filename: true,
+                    overwrite: false,
+                },
+                (error, result) => {
+                    if (error) return reject(error);
+                    resolve(result);
+                }
+            );
+            Readable.from(file.buffer).pipe(uploadStream);
+        });
+
+        const formatByMime = {
+            "application/pdf": "pdf",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+        };
+        const resolvedFormat =
+            formatByMime[file.mimetype] ||
+            uploadResult.format ||
+            String(file.originalname || "").split(".").pop()?.toLowerCase();
+        const encodedPublicId = String(uploadResult.public_id || "")
+            .split("/")
+            .map((part) => encodeURIComponent(part))
+            .join("/");
+        const urlExtension = resolvedFormat ? `.${resolvedFormat}` : "";
+        const resolvedUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/v${uploadResult.version}/${encodedPublicId}${urlExtension}`;
+        const fileSizeMb = Number((file.size / (1024 * 1024)).toFixed(2));
+
+        return {
+            url: resolvedUrl || uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+            file_size: fileSizeMb,
+            format: resolvedFormat,
+        };
+    }
+
+    async createMeeting(data, advisorUserId, meetingFile) {
         if (!advisorUserId) throwError("advisor_user_id is required", 422);
 
         const advisorClass = await AdvisorClass.findOne({
@@ -183,6 +233,15 @@ class MeetingService {
             if (!term) throwError("term_id is invalid", 422);
         }
 
+        let filePayload = null;
+        if (meetingFile) {
+            try {
+                filePayload = await this.uploadMeetingFile(meetingFile);
+            } catch (error) {
+                throwError(error?.message || "upload file to cloudinary failed", 502);
+            }
+        }
+
         const created = await Meeting.create({
             class_id: data.class_id,
             student_user_ids: studentIds,
@@ -193,6 +252,7 @@ class MeetingService {
             notes_raw: data.notes_raw,
             notes_summary: data.notes_summary,
             summary_model: data.summary_model || "T5",
+            file: filePayload,
         });
 
         return created;

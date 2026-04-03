@@ -32,6 +32,12 @@ const meetingSchema = new mongoose.Schema(
         notes_raw: { type: String, required: true, trim: true, minlength: 30 },
         notes_summary: { type: String },
         summary_model: { type: String, default: "T5" },
+        file: {
+            url: { type: String, trim: true },
+            public_id: { type: String, trim: true },
+            file_size: { type: Number, min: 0, max: 5 },
+            format: { type: String, trim: true, lowercase: true, enum: ["doc", "docx", "pdf"] },
+        },
     },
     { timestamps: true, collection: "meetings" }
 );

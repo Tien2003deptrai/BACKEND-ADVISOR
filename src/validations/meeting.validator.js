@@ -12,11 +12,23 @@ class MeetingValidator {
     createMeetingValidator = [
         body("class_id").notEmpty().withMessage("class_id is required").isMongoId(),
         body("student_user_ids")
+            .customSanitizer((value) => {
+                if (Array.isArray(value)) return value;
+                if (typeof value === "string") {
+                    try {
+                        const parsed = JSON.parse(value);
+                        return parsed;
+                    } catch (error) {
+                        return value;
+                    }
+                }
+                return value;
+            })
             .isArray({ min: 1 })
             .withMessage("student_user_ids must be a non-empty array"),
         body("student_user_ids.*").isMongoId().withMessage("invalid student_user_id"),
-        body("advisor_user_id").optional().isMongoId().withMessage("invalid advisor_user_id"),
-        body("term_id").optional().isMongoId().withMessage("invalid term_id"),
+        body("advisor_user_id").optional({ values: "falsy" }).isMongoId().withMessage("invalid advisor_user_id"),
+        body("term_id").optional({ values: "falsy" }).isMongoId().withMessage("invalid term_id"),
         body("meeting_time").notEmpty().withMessage("meeting_time is required").isISO8601(),
         body("meeting_end_time")
             .notEmpty()
