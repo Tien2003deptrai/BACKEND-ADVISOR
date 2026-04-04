@@ -3,11 +3,42 @@ const Feedback = require("../models/feedback.model");
 const AdvisorClass = require("../models/advisorClass.model");
 const ClassMember = require("../models/classMember.model");
 const Term = require("../models/term.model");
-const { Readable } = require("stream");
+const path = require("path");
 const cloudinary = require("../config/cloudinary");
 const throwError = require("../utils/throwError");
 
 class MeetingService {
+    normalizeDownloadFilename(originalname, fallbackFormat) {
+        const parsed = path.parse(String(originalname || ""));
+        const baseName = String(parsed.name || "meeting-file")
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 120);
+        const extension = String((fallbackFormat || parsed.ext || "").replace(/^\./, "")).toLowerCase();
+        return extension ? `${baseName || "meeting-file"}.${extension}` : baseName || "meeting-file";
+    }
+
+    buildDownloadUrl(publicId) {
+        if (!publicId) return "";
+        return cloudinary.url(publicId, {
+            resource_type: "raw",
+            type: "upload",
+            secure: true,
+            flags: "attachment",
+        });
+    }
+
+    normalizeMeetingFile(meeting) {
+        const data = meeting?.toObject ? meeting.toObject() : meeting;
+        if (!data?.file?.public_id) return data;
+        const fallbackFormat = data.file.format || String(data.file.original_name || "").split(".").pop()?.toLowerCase();
+        const downloadFilename = this.normalizeDownloadFilename(data.file.original_name, fallbackFormat);
+        data.file.download_url = this.buildDownloadUrl(data.file.public_id);
+        data.file.original_name = data.file.original_name || downloadFilename;
+        return data;
+    }
+
     async listMyMeetings(body, studentUserId) {
         if (!studentUserId) throwError("student_user_id is required", 422);
 
@@ -30,7 +61,7 @@ class MeetingService {
         ]);
 
         return {
-            items,
+            items: items.map((item) => this.normalizeMeetingFile(item)),
             pagination: {
                 page,
                 limit,
@@ -65,7 +96,7 @@ class MeetingService {
         ]);
 
         return {
-            items,
+            items: items.map((item) => this.normalizeMeetingFile(item)),
             pagination: {
                 page,
                 limit,
@@ -172,13 +203,14 @@ class MeetingService {
                     use_filename: true,
                     unique_filename: true,
                     overwrite: false,
+                    filename_override: file.originalname,
                 },
                 (error, result) => {
                     if (error) return reject(error);
                     resolve(result);
                 }
             );
-            Readable.from(file.buffer).pipe(uploadStream);
+            uploadStream.end(file.buffer);
         });
 
         const formatByMime = {
@@ -190,17 +222,18 @@ class MeetingService {
             formatByMime[file.mimetype] ||
             uploadResult.format ||
             String(file.originalname || "").split(".").pop()?.toLowerCase();
-        const encodedPublicId = String(uploadResult.public_id || "")
-            .split("/")
-            .map((part) => encodeURIComponent(part))
-            .join("/");
-        const urlExtension = resolvedFormat ? `.${resolvedFormat}` : "";
-        const resolvedUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/v${uploadResult.version}/${encodedPublicId}${urlExtension}`;
+        const originalName = String(file.originalname || "").trim();
+        const downloadFilename = this.normalizeDownloadFilename(originalName, resolvedFormat);
+        const downloadUrl = this.buildDownloadUrl(uploadResult.public_id);
         const fileSizeMb = Number((file.size / (1024 * 1024)).toFixed(2));
 
         return {
-            url: resolvedUrl || uploadResult.secure_url,
+            url: uploadResult.secure_url,
+            preview_url: uploadResult.secure_url,
+            download_url: downloadUrl,
             public_id: uploadResult.public_id,
+            original_name: originalName || downloadFilename,
+            mime_type: file.mimetype,
             file_size: fileSizeMb,
             format: resolvedFormat,
         };
@@ -255,7 +288,7 @@ class MeetingService {
             file: filePayload,
         });
 
-        return created;
+        return this.normalizeMeetingFile(created);
     }
 }
 

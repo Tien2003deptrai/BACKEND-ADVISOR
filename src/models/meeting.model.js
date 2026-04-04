@@ -34,7 +34,10 @@ const meetingSchema = new mongoose.Schema(
         summary_model: { type: String, default: "T5" },
         file: {
             url: { type: String, trim: true },
+            download_url: { type: String, trim: true },
             public_id: { type: String, trim: true },
+            original_name: { type: String, trim: true },
+            mime_type: { type: String, trim: true, lowercase: true },
             file_size: { type: Number, min: 0, max: 5 },
             format: { type: String, trim: true, lowercase: true, enum: ["doc", "docx", "pdf"] },
         },
