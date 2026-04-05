@@ -7,6 +7,16 @@ const authorizeRoles = require("../middlewares/authorize.middleware");
 
 const router = express.Router();
 
+router.post("/me", authMiddleware, userController.getMe);
+
+router.post(
+    "/me/update",
+    authMiddleware,
+    userValidator.updateMyProfileValidator,
+    validate,
+    userController.updateMyProfile
+);
+
 router.post("/create",
     authMiddleware,
     authorizeRoles("ADMIN", "ADVISOR"),

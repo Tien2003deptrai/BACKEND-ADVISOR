@@ -27,6 +27,24 @@ class UserController {
             next(error);
         }
     }
+
+    async getMe(req, res, next) {
+        try {
+            const result = await userService.getMe(req.user);
+            return res.status(200).json({ message: "Get current user successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateMyProfile(req, res, next) {
+        try {
+            const result = await userService.updateMyProfile(req.body, req.user);
+            return res.status(200).json({ message: "Profile updated successfully", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new UserController();

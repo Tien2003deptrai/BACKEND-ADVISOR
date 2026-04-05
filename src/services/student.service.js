@@ -1,15 +1,70 @@
+const mongoose = require("mongoose");
 const User = require("../models/user.model");
 const ClassMember = require("../models/classMember.model");
 const AdvisorClass = require("../models/advisorClass.model");
+const Department = require("../models/department.model");
+const Major = require("../models/major.model");
 const throwError = require("../utils/throwError");
 
 class StudentService {
-    async getStudents(body) {
+    /**
+     * @param {object} body
+     * @param {{ role?: string; userId?: import("mongoose").Types.ObjectId | string }} [currentUser]
+     * Khi có class_id: chỉ trả sinh viên đúng khoa/ngành của lớp, loại đã ACTIVE trong lớp này
+     * và đã ACTIVE ở lớp khác. advisor_user_id (tuỳ chọn) phải trùng advisor của lớp.
+     */
+    async getStudents(body, currentUser) {
         const page = Number(body.page || 1);
         const limit = Number(body.limit || 20);
         const skip = (page - 1) * limit;
 
         const filter = { role: "STUDENT" };
+
+        if (body.class_id) {
+            const classDoc = await AdvisorClass.findById(body.class_id).select(
+                "_id advisor_user_id department_id major_id status"
+            );
+            if (!classDoc) throwError("class not found", 404);
+            if (classDoc.status !== "ACTIVE") throwError("class is not active", 422);
+            if (!classDoc.department_id) throwError("class does not have department_id", 422);
+
+            if (currentUser?.role === "ADVISOR") {
+                if (String(classDoc.advisor_user_id) !== String(currentUser.userId)) {
+                    throwError("forbidden for this class", 403);
+                }
+            }
+
+            if (body.advisor_user_id && String(classDoc.advisor_user_id) !== String(body.advisor_user_id)) {
+                throwError("advisor_user_id does not match class advisor", 422);
+            }
+
+            filter["org.department_id"] = classDoc.department_id;
+            if (classDoc.major_id) {
+                filter["org.major_id"] = classDoc.major_id;
+            }
+
+            const activeInThisClass = await ClassMember.find({
+                class_id: classDoc._id,
+                status: "ACTIVE",
+            }).distinct("student_user_id");
+            const activeOtherClass = await ClassMember.find({
+                status: "ACTIVE",
+                class_id: { $ne: classDoc._id },
+            }).distinct("student_user_id");
+            const excludeStr = new Set([
+                ...activeInThisClass.map((id) => String(id)),
+                ...activeOtherClass.map((id) => String(id)),
+            ]);
+            if (excludeStr.size) {
+                const excludeIds = [...excludeStr]
+                    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+                    .map((id) => new mongoose.Types.ObjectId(id));
+                if (excludeIds.length) {
+                    filter._id = { $nin: excludeIds };
+                }
+            }
+        }
+
         if (body.search) {
             filter.$or = [
                 { username: { $regex: body.search, $options: "i" } },
@@ -81,30 +136,49 @@ class StudentService {
             );
         }
 
+        let departmentDisplay = null;
+        let majorDisplay = null;
+        if (advisorClass?.department_id) {
+            const dept = await Department.findById(advisorClass.department_id)
+                .select("department_code department_name")
+                .lean();
+            if (dept) {
+                departmentDisplay = [dept.department_code, dept.department_name].filter(Boolean).join(" — ");
+            }
+        }
+        if (advisorClass?.major_id) {
+            const maj = await Major.findById(advisorClass.major_id).select("major_code major_name").lean();
+            if (maj) {
+                majorDisplay = [maj.major_code, maj.major_name].filter(Boolean).join(" — ");
+            }
+        }
+
         return {
             student_user_id: student._id,
             advisor: advisor
                 ? {
-                      _id: advisor._id,
-                      username: advisor.username,
-                      email: advisor.email,
-                      status: advisor.status,
-                      profile: advisor.profile,
-                      advisor_info: advisor.advisor_info,
-                      org: advisor.org,
-                  }
+                    _id: advisor._id,
+                    username: advisor.username,
+                    email: advisor.email,
+                    status: advisor.status,
+                    profile: advisor.profile,
+                    advisor_info: advisor.advisor_info,
+                    org: advisor.org,
+                }
                 : null,
             advisor_class: advisorClass
                 ? {
-                      _id: advisorClass._id,
-                      class_code: advisorClass.class_code,
-                      class_name: advisorClass.class_name,
-                      advisor_user_id: advisorClass.advisor_user_id,
-                      department_id: advisorClass.department_id,
-                      major_id: advisorClass.major_id,
-                      cohort_year: advisorClass.cohort_year,
-                      status: advisorClass.status,
-                  }
+                    _id: advisorClass._id,
+                    class_code: advisorClass.class_code,
+                    class_name: advisorClass.class_name,
+                    advisor_user_id: advisorClass.advisor_user_id,
+                    department_id: advisorClass.department_id,
+                    major_id: advisorClass.major_id,
+                    department_display: departmentDisplay,
+                    major_display: majorDisplay,
+                    cohort_year: advisorClass.cohort_year,
+                    status: advisorClass.status,
+                }
                 : null,
         };
     }

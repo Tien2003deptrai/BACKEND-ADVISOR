@@ -1,4 +1,4 @@
-﻿const Notification = require("../models/notification.model");
+const Notification = require("../models/notification.model");
 const RiskPrediction = require("../models/riskPrediction.model");
 const Alert = require("../models/alert.model");
 const Feedback = require("../models/feedback.model");
@@ -52,7 +52,11 @@ class NotificationService {
 
         const [items, total] = await Promise.all([
             Notification.find(filter)
-                .populate("alert_id", "alert_type source_ai severity status detected_at term_id")
+                .populate({
+                    path: "alert_id",
+                    select: "alert_type source_ai severity status detected_at term_id",
+                    populate: { path: "term_id", select: "term_code term_name" },
+                })
                 .sort({ sent_at: -1 })
                 .skip(skip)
                 .limit(limit),

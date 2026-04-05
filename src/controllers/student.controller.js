@@ -3,7 +3,7 @@ const studentService = require("../services/student.service");
 class StudentController {
     async getStudents(req, res, next) {
         try {
-            const result = await studentService.getStudents(req.body);
+            const result = await studentService.getStudents(req.body, req.user);
             return res.status(200).json({ message: "Get students successfully", data: result });
         } catch (error) {
             next(error);
