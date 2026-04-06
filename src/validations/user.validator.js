@@ -59,6 +59,29 @@ class UserValidator {
     getUserInfoValidator = [
         body("user_id").notEmpty().withMessage("user_id is required").isMongoId().withMessage("invalid user_id"),
     ];
+
+    updateMyProfileValidator = [
+        body("profile")
+            .exists()
+            .withMessage("profile is required")
+            .bail()
+            .isObject()
+            .withMessage("profile must be an object"),
+        body("profile").custom((value) => {
+            if (!value || typeof value !== "object") return false;
+            const keys = ["full_name", "phone", "address"];
+            const has = keys.some((k) => value[k] !== undefined);
+            if (!has) {
+                throw new Error("at least one of profile.full_name, profile.phone, profile.address is required");
+            }
+            if (value.full_name !== undefined && String(value.full_name).trim() === "") {
+                throw new Error("profile.full_name cannot be empty");
+            }
+            return true;
+        }),
+        body("profile.phone").optional().isString().withMessage("profile.phone must be a string"),
+        body("profile.address").optional().isString().withMessage("profile.address must be a string"),
+    ];
 }
 
 module.exports = new UserValidator();

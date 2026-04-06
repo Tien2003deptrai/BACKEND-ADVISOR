@@ -1,4 +1,4 @@
-﻿const mongoose = require("mongoose");
+const mongoose = require("mongoose");
 const AcademicRecord = require("../models/academicRecord.model");
 const RiskPrediction = require("../models/riskPrediction.model");
 const Feedback = require("../models/feedback.model");
@@ -26,7 +26,8 @@ class DashboardService {
                 .limit(historyLimit)
                 .select(
                     "student_user_id term_id gpa_prev_sem gpa_current num_failed attendance_rate sentiment_score recorded_at"
-                ),
+                )
+                .populate("term_id", "term_code term_name"),
             Feedback.aggregate([
                 { $match: { student_user_id: new mongoose.Types.ObjectId(studentUserId) } },
                 {

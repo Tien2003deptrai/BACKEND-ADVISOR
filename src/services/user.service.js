@@ -185,6 +185,56 @@ class UserService {
             advisor_class_memberships,
         };
     }
+
+    /** Текущий пользователь по JWT (любая активная роль). */
+    async getMe(currentUser) {
+        const userId = currentUser?.userId;
+        if (!userId) throwError("unauthorized", 401);
+
+        const user = await User.findById(userId)
+            .select("-password_hash -token_version")
+            .populate("org.department_id", "department_code department_name")
+            .populate("org.major_id", "major_code major_name department_id")
+            .lean();
+
+        if (!user) throwError("user not found", 404);
+        return user;
+    }
+
+    /** Обновление собственного профиля (без смены роли/email/username). */
+    async updateMyProfile(body, currentUser) {
+        const userId = currentUser?.userId;
+        if (!userId) throwError("unauthorized", 401);
+
+        const user = await User.findById(userId);
+        if (!user) throwError("user not found", 404);
+
+        const { profile } = body;
+        if (!profile || typeof profile !== "object") {
+            throwError("profile is required", 422);
+        }
+
+        const $set = {};
+        if (profile.full_name !== undefined) {
+            const v = String(profile.full_name).trim();
+            if (!v) throwError("profile.full_name cannot be empty", 422);
+            $set["profile.full_name"] = v;
+        }
+        if (profile.phone !== undefined) {
+            $set["profile.phone"] = profile.phone == null ? "" : String(profile.phone).trim();
+        }
+        if (profile.address !== undefined) {
+            $set["profile.address"] = profile.address == null ? "" : String(profile.address).trim();
+        }
+
+        if (Object.keys($set).length === 0) {
+            throwError("no profile fields to update", 422);
+        }
+
+        await User.findByIdAndUpdate(userId, { $set }, { new: true });
+
+        return this.getMe(currentUser);
+    }
 }
 
 module.exports = new UserService();
