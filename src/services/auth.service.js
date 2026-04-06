@@ -14,9 +14,12 @@ class AuthService {
         const isMatch = await user.comparePassword(userData.password);
         if (!isMatch) throwError("Invalid email or password", 401);
         if (user.status !== "ACTIVE") throwError("User is not active", 403);
-
-        user.last_login_at = new Date();
-        await user.save();
+            const loginAt = new Date();
+            await userModel.updateOne(
+                { _id: user._id },
+                { $set: { last_login_at: loginAt } }
+            );
+            user.last_login_at = loginAt;
 
         const accessJti = randomUUID();
         const refreshJti = randomUUID();
@@ -58,8 +61,11 @@ class AuthService {
             throwError("Refresh token is expired or revoked", 401);
         }
 
-        user.token_version = (user.token_version || 0) + 1;
-        await user.save();
+            await userModel.updateOne(
+                { _id: user._id },
+                { $inc: { token_version: 1 } }
+            );
+            user.token_version = (user.token_version || 0) + 1;
 
         const accessJti = randomUUID();
         const refreshJti = randomUUID();
@@ -103,8 +109,11 @@ class AuthService {
             }
         }
 
-        user.token_version = (user.token_version || 0) + 1;
-        await user.save();
+            await userModel.updateOne(
+                { _id: user._id },
+                { $inc: { token_version: 1 } }
+            );
+            user.token_version = (user.token_version || 0) + 1;
 
         return { logged_out: true, all_devices: Boolean(allDevices) };
     }

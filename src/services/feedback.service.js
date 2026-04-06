@@ -202,7 +202,7 @@ class FeedbackService {
         return created;
     }
 
-    async getFeedbackList(body) {
+    async getFeedbackList(body, currentUser) {
         const page = Number(body.page || 1);
         const limit = Number(body.limit || 20);
         const skip = (page - 1) * limit;
@@ -214,6 +214,16 @@ class FeedbackService {
 
         if (body.sentiment_label) filter.sentiment_label = body.sentiment_label;
         if (body.meeting_id) filter.meeting_id = body.meeting_id;
+
+        // Scope by token role to prevent ADVISOR/STUDENT from reading unrelated feedback.
+        const role = currentUser?.role;
+        const userId = currentUser?.userId;
+        if (role === "ADVISOR") {
+            filter.advisor_user_id = userId;
+        }
+        if (role === "STUDENT") {
+            filter.student_user_id = userId;
+        }
 
         const [items, total] = await Promise.all([
             Feedback.find(filter)
